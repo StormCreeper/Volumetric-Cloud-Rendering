@@ -23,6 +23,7 @@ public:
         m_Width = width;
         m_Height = height;
         initFramebuffer();
+        initMesh();
     }
 
     void initFramebuffer() {

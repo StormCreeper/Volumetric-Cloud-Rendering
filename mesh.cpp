@@ -172,10 +172,10 @@ void Mesh::genFace(std::vector<float>& vertexPositions, std::vector<float>& vert
 
 std::shared_ptr<Mesh> Mesh::genPlane() {
     std::vector<float> vertexPositions{
-        -1.0f, 0.0f, -1.0f, // 0
-        -1.0f, 0.0f, 1.0f, // 1
-        1.0f, 0.0f, 1.0f, // 2
-        1.0f, 0.0f, -1.0f, // 3
+        -1.0f, -1.0f, 0.0f, // 0
+        -1.0f, 1.0f, 0.0f, // 1
+        1.0f, 1.0f, 0.0f, // 2
+        1.0f, -1.0f, 0.0f, // 3
     };
     std::vector<float> vertexNormals{
         0.0f, 1.0f, 0.0f, // 0
@@ -190,7 +190,7 @@ std::shared_ptr<Mesh> Mesh::genPlane() {
         1.0f, 0.0f, // 3
     };
     std::vector<unsigned int> triangleIndices{
-        0, 1, 2,
+        0, 2, 1,
         0, 2, 3,
     };
 

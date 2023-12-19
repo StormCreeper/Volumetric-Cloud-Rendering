@@ -153,7 +153,6 @@ void initGPUprogram() {
 void initCPUgeometry() {
     g_meshes.push_back(Mesh::genSphere(100));
     g_meshes.push_back(Mesh::genSubdividedPlane(100));
-    glBindVertexArray(g_meshes[0]->m_vao);  
 }
 
 void initCamera() {
@@ -358,6 +357,8 @@ void render() {
 
     // Render objects
 
+    glBindVertexArray(g_meshes[0]->m_vao);  
+    
     for (int i = g_globalParams.nbShells - 1; i >= 0; i--) {
         float height = (float)i / (float)(g_globalParams.nbShells-1);
         setUniform(g_geometryShader, "u_height", height);
@@ -374,6 +375,7 @@ void render() {
     setUniform(g_postProcessShader, "gPosition", 0);
     setUniform(g_postProcessShader, "gNormal", 1);
     setUniform(g_postProcessShader, "gAlbedo", 2);
+    setUniform(g_postProcessShader, "gDepth", 3);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, g_framebuffer->m_position);
@@ -381,6 +383,12 @@ void render() {
     glBindTexture(GL_TEXTURE_2D, g_framebuffer->m_normal);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, g_framebuffer->m_albedo);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, g_framebuffer->m_depth);
+    
+
+    glBindVertexArray(g_framebuffer->m_quad->m_vao);
+    glDrawElements(GL_TRIANGLES, g_framebuffer->m_quad->m_numIndices, GL_UNSIGNED_INT, 0);
 
     renderUI();
 }
