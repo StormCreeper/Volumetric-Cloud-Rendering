@@ -18,20 +18,30 @@
 #include <memory>
 #include <string>
 
-#define _MY_OPENGL_IS_33_
+const int MAX_LIGHTS = 10;
 
 // Window parameters
 GLFWwindow *g_window {};
 
 // GPU objects
 GLuint g_geometryShader {};  // A GPU program contains at least a vertex shader and a fragment shader
-GLuint g_postProcessShader {}; // A GPU program contains at least a vertex shader and a fragment shader
+GLuint g_lightingShader {}; // A GPU program contains at least a vertex shader and a fragment shader
 
 Camera g_camera {};
 
 std::shared_ptr<FrameBuffer> g_framebuffer {};
 
-std::vector<std::shared_ptr<Mesh>> g_meshes {};
+std::vector<std::shared_ptr<Object3D>> g_objects {};
+
+struct Light {
+    int type; // 0 = ambiant, 1 = point, 2 = directional
+    glm::vec3 position;
+    glm::vec3 color;
+    float intensity;
+};
+
+Light g_lights[MAX_LIGHTS] {};
+int g_numLights = 0;
 
 float g_fps = 0.0f;
 
@@ -139,20 +149,32 @@ void initOpenGL() {
 
 void initGPUprogram() {
     g_geometryShader = glCreateProgram();  // Create a GPU program, i.e., two central shaders of the graphics pipeline
-    loadShader(g_geometryShader, GL_VERTEX_SHADER, "resources/geometryVertex.glsl");
-    loadShader(g_geometryShader, GL_FRAGMENT_SHADER, "resources/geometryFragment.glsl");
+    loadShader(g_geometryShader, GL_VERTEX_SHADER, "../resources/geometryVertex.glsl");
+    loadShader(g_geometryShader, GL_FRAGMENT_SHADER, "../resources/geometryFragment.glsl");
     glLinkProgram(g_geometryShader);  // The main GPU program is ready to be handle streams of polygons
 
-    g_postProcessShader = glCreateProgram();  // Create a GPU program, i.e., two central shaders of the graphics pipeline
-    loadShader(g_postProcessShader, GL_VERTEX_SHADER, "resources/lightingVertex.glsl");
-    loadShader(g_postProcessShader, GL_FRAGMENT_SHADER, "resources/lightingFragment.glsl");
-    glLinkProgram(g_postProcessShader);  // The main GPU program is ready to be handle streams of polygons
+    g_lightingShader = glCreateProgram();  // Create a GPU program, i.e., two central shaders of the graphics pipeline
+    loadShader(g_lightingShader, GL_VERTEX_SHADER, "../resources/lightingVertex.glsl");
+    loadShader(g_lightingShader, GL_FRAGMENT_SHADER, "../resources/lightingFragment.glsl");
+    glLinkProgram(g_lightingShader);  // The main GPU program is ready to be handle streams of polygons
 }
 
 
-void initCPUgeometry() {
-    g_meshes.push_back(Mesh::genSphere(100));
-    g_meshes.push_back(Mesh::genSubdividedPlane(100));
+void initScene() {
+    g_objects.push_back(std::make_shared<Object3D>(Mesh::genSphere(16)));
+    g_objects.push_back(std::make_shared<Object3D>(Mesh::genSubdividedPlane(2)));
+
+    g_objects[0]->setModelMatrix(glm::identity<glm::mat4>());
+
+    g_objects[1]->setModelMatrix(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f, 10.0f, 10.0f)));
+    g_objects[1]->setModelMatrix(glm::translate(g_objects[1]->getModelMatrix(), glm::vec3(0.0f, -1.0f, 0.0f)));
+
+    g_lights[g_numLights++] = Light{
+        1,
+        glm::vec3(3.0f, 3.0f, 3.0f),
+        glm::vec3(1.0, 1.0, 1.0),
+        1.0f
+    };
 }
 
 void initCamera() {
@@ -171,7 +193,7 @@ void init() {
     initGLFW();
     initOpenGL();
 
-    initCPUgeometry();
+    initScene();
     initGPUprogram();
     initCamera();
     
@@ -187,110 +209,63 @@ void clear() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-
 }
-
-struct TexturingParams {
-    glm::vec3 groundColor;
-    glm::vec3 sandColor;
-    glm::vec3 waterColor;
-
-    glm::vec3 treeColor;
-    glm::vec3 trunkColor;
-    glm::vec3 grassColor;
-
-    int treeDensity;
-    int grassDensity;
-};
-
-struct GenerationParams {
-	float heightFactor;
-	float terrainHeightFactor;
-
-	int nOctaves;
-	float terrainScale;
-	float terrainHeightOffset;
-};
-
-struct GlobalParams {
-    int nbShells;
-    int meshIndex;
-    TexturingParams texturingParams;
-    GenerationParams generationParams;
-};
-
-GlobalParams g_globalParams = {
-    128,
-    0,
-    {
-        glm::vec3(0.6f, 0.75f, 0.15f),
-        glm::vec3(0.9f, 0.8f, 0.2f),
-        glm::vec3(0.0f, 0.0f, 1.0f),
-
-        glm::vec3(0.2f, 0.7f, 0.1f),
-        glm::vec3(0.5f, 0.3f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f),
-
-        100,
-        2000
-    },
-    {
-        0.3f,
-        0.2f,
-        8,
-        1.0f,
-        0.1f
-    }
-};
 
 void renderUI() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // Start drawing here 
-
-    ImGui::Begin("Parameters", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-
-    ImGui::SliderInt("Number of shells", &g_globalParams.nbShells, 8, 256);
-
-    ImGui::LabelText("Texturing parameters", "");
-
-    ImGui::ColorEdit3("Ground color", &g_globalParams.texturingParams.groundColor[0]);
-    ImGui::ColorEdit3("Sand color", &g_globalParams.texturingParams.sandColor[0]);
-    ImGui::ColorEdit3("Water color", &g_globalParams.texturingParams.waterColor[0]);
-    
-    ImGui::NewLine();
-
-    ImGui::ColorEdit3("Tree color", &g_globalParams.texturingParams.treeColor[0]);
-    ImGui::ColorEdit3("Trunk color", &g_globalParams.texturingParams.trunkColor[0]);
-    ImGui::ColorEdit3("Grass color", &g_globalParams.texturingParams.grassColor[0]);
-    
-    ImGui::NewLine();
-
-    ImGui::SliderInt("Tree density", &g_globalParams.texturingParams.treeDensity, 1, 500);
-    ImGui::SliderInt("Grass density", &g_globalParams.texturingParams.grassDensity, 1, 5000);
-
-    ImGui::End();
-
-    ImGui::Begin("Generation parameters", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-
-    if(ImGui::SliderInt("Mesh index", &g_globalParams.meshIndex, 0, g_meshes.size()-1)) {
-        glBindVertexArray(g_meshes[g_globalParams.meshIndex]->m_vao);
-    }
-
-    ImGui::SliderFloat("Height factor", &g_globalParams.generationParams.heightFactor, 0.0f, 1.0f);
-    ImGui::SliderFloat("Terrain height factor", &g_globalParams.generationParams.terrainHeightFactor, 0.0f, 1.0f);
-
-    ImGui::SliderInt("Number of octaves", &g_globalParams.generationParams.nOctaves, 1, 16);
-    ImGui::SliderFloat("Terrain scale", &g_globalParams.generationParams.terrainScale, 0.0f, 10.0f);
-    ImGui::SliderFloat("Terrain height offset", &g_globalParams.generationParams.terrainHeightOffset, 0.0f, 10.0f);
-
-    ImGui::End();
+    // Start drawing here
 
     ImGui::Begin("Performance", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
     ImGui::Text("FPS: %.1f", g_fps);
+
+    ImGui::End();
+
+    ImGui::Begin("Lights", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+    const char* items[] = { "Ambiant", "Point", "Directional" };
+
+    for(int i=0; i<g_numLights; i++) {
+        Light &light = g_lights[i];
+        if(ImGui::CollapsingHeader(std::string("Light " + std::to_string(i)).c_str())) {
+            //ImGui::Text("Light %d", i);
+
+            const char* comboLabel = items[light.type];
+
+            if (ImGui::BeginCombo(("Type" + std::to_string(i)).c_str(), comboLabel)) {
+                for (int n = 0; n < IM_ARRAYSIZE(items); n++) {
+                    const bool is_selected = (comboLabel == items[n]);
+                    if (ImGui::Selectable(items[n], is_selected)) {
+                        light.type = n;
+                    }
+                    if (is_selected) {
+                        ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            if(light.type != 0)
+                ImGui::SliderFloat3(((light.type == 1 ? "Position" : "Direction") + std::to_string(i)).c_str(), &light.position.x, -10.0f, 10.0f);
+            ImGui::ColorEdit3(("Color" + std::to_string(i)).c_str(), &light.color.x);
+            ImGui::SliderFloat(("Intensity" + std::to_string(i)).c_str(), &light.intensity, 0.0f, light.type == 0 ? 1.0f : 10.0f);
+        }
+    }
+    if(g_numLights < MAX_LIGHTS && ImGui::Button("Add light")) {
+        g_lights[g_numLights++] = Light{
+            1,
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(1.0, 1.0, 1.0),
+            1.0f
+        };
+        ImGui::SameLine();
+    }
+    if(g_numLights > 0 && ImGui::Button("Remove light")) {
+        g_numLights--;
+    }
 
     ImGui::End();
 
@@ -301,28 +276,7 @@ void renderUI() {
 }
 
 void setParamsUniforms() {
-
-    // Texturing params
-
-    setUniform(g_geometryShader, "u_texturingParams.groundColor", g_globalParams.texturingParams.groundColor);
-    setUniform(g_geometryShader, "u_texturingParams.sandColor", g_globalParams.texturingParams.sandColor);
-    setUniform(g_geometryShader, "u_texturingParams.waterColor", g_globalParams.texturingParams.waterColor);
-
-    setUniform(g_geometryShader, "u_texturingParams.treeColor", g_globalParams.texturingParams.treeColor);
-    setUniform(g_geometryShader, "u_texturingParams.trunkColor", g_globalParams.texturingParams.trunkColor);
-    setUniform(g_geometryShader, "u_texturingParams.grassColor", g_globalParams.texturingParams.grassColor);
-
-    setUniform(g_geometryShader, "u_texturingParams.treeDensity", g_globalParams.texturingParams.treeDensity);
-    setUniform(g_geometryShader, "u_texturingParams.grassDensity", g_globalParams.texturingParams.grassDensity);
-
-    // Generation params
-
-    setUniform(g_geometryShader, "u_generationParams.heightFactor", g_globalParams.generationParams.heightFactor);
-    setUniform(g_geometryShader, "u_generationParams.terrainHeightFactor", g_globalParams.generationParams.terrainHeightFactor);
-
-    setUniform(g_geometryShader, "u_generationParams.nOctaves", g_globalParams.generationParams.nOctaves);
-    setUniform(g_geometryShader, "u_generationParams.terrainScale", g_globalParams.generationParams.terrainScale);
-    setUniform(g_geometryShader, "u_generationParams.terrainHeightOffset", g_globalParams.generationParams.terrainHeightOffset);
+    
 }
 
 void setUniforms() {
@@ -357,25 +311,38 @@ void render() {
 
     // Render objects
 
-    glBindVertexArray(g_meshes[0]->m_vao);  
-    
-    for (int i = g_globalParams.nbShells - 1; i >= 0; i--) {
-        float height = (float)i / (float)(g_globalParams.nbShells-1);
-        setUniform(g_geometryShader, "u_height", height);
-        glDrawElements(GL_TRIANGLES, g_meshes[g_globalParams.meshIndex]->m_numIndices, GL_UNSIGNED_INT, 0);
+    for(std::shared_ptr<Object3D> mesh : g_objects) {
+        mesh->render(g_geometryShader);
     }
 
     // Post-process pass
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glUseProgram(g_postProcessShader);
+    glUseProgram(g_lightingShader);
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);  // specify the background color, used any time the framebuffer is cleared
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  // Erase the color and z buffers.
 
-    setUniform(g_postProcessShader, "gPosition", 0);
-    setUniform(g_postProcessShader, "gNormal", 1);
-    setUniform(g_postProcessShader, "gAlbedo", 2);
-    setUniform(g_postProcessShader, "gDepth", 3);
+    setUniform(g_lightingShader, "u_Position", 0);
+    setUniform(g_lightingShader, "u_Normal", 1);
+    setUniform(g_lightingShader, "u_Albedo", 2);
+    setUniform(g_lightingShader, "u_Random", 3);
+
+    const glm::mat4 viewMatrix = g_camera.computeViewMatrix();
+    const glm::mat4 projMatrix = g_camera.computeProjectionMatrix();
+
+    setUniform(g_lightingShader, "u_viewMat", viewMatrix);
+    setUniform(g_lightingShader, "u_projMat", projMatrix);
+    setUniform(g_lightingShader, "u_invViewMat", glm::inverse(viewMatrix));
+    setUniform(g_lightingShader, "u_invProjMat", glm::inverse(projMatrix));
+
+    setUniform(g_lightingShader, "u_time", static_cast<float>(glfwGetTime()));
+
+    for(int i = 0; i < g_numLights; i++) {
+        setUniform(g_lightingShader, std::string("u_lights[" + std::to_string(i) + "].type").c_str(), g_lights[i].type);
+        setUniform(g_lightingShader, std::string("u_lights[" + std::to_string(i) + "].position").c_str(), g_lights[i].position);
+        setUniform(g_lightingShader, std::string("u_lights[" + std::to_string(i) + "].color").c_str(), g_lights[i].color);
+        setUniform(g_lightingShader, std::string("u_lights[" + std::to_string(i) + "].intensity").c_str(), g_lights[i].intensity);
+    }
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, g_framebuffer->m_position);
@@ -383,9 +350,6 @@ void render() {
     glBindTexture(GL_TEXTURE_2D, g_framebuffer->m_normal);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, g_framebuffer->m_albedo);
-    glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, g_framebuffer->m_depth);
-    
 
     glBindVertexArray(g_framebuffer->m_quad->m_vao);
     glDrawElements(GL_TRIANGLES, g_framebuffer->m_quad->m_numIndices, GL_UNSIGNED_INT, 0);
@@ -409,7 +373,7 @@ void update(const float currentTimeInSec) {
 
     // Update the camera position
 
-    glm::vec3 targetPosition = glm::vec3(0.05f, 0.05f, 0.0f);
+    glm::vec3 targetPosition = glm::vec3(0.0f, 0.0f, 0.0f);
     g_camera.setTarget(targetPosition);
 
     glm::vec3 cameraOffset = glm::normalize(glm::vec3(cos(g_cameraAngleX), 0.3f, sin(g_cameraAngleX))) * (1.1f + g_cameraDistance);

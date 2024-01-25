@@ -63,6 +63,7 @@ void Mesh::setGPUGeometry(GLuint posVbo, GLuint normalVbo, GLuint uvVbo, GLuint 
     m_numIndices = numIndices;
 }
 
+
 void Mesh::render() const {
     glBindVertexArray(m_vao);                                                    // activate the VAO storing geometry data
     glDrawElements(GL_TRIANGLES, m_numIndices, GL_UNSIGNED_INT, 0);  // Call for rendering: stream the current GPU geometry through the current GPU program
@@ -191,7 +192,7 @@ std::shared_ptr<Mesh> Mesh::genPlane() {
     };
     std::vector<unsigned int> triangleIndices{
         0, 2, 1,
-        0, 2, 3,
+        0, 3, 2,
     };
 
     // Create a mesh object

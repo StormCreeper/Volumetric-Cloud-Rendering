@@ -24,6 +24,9 @@ public:
     static std::shared_ptr<Mesh> genPlane(); // Should generate a unit plane
     static std::shared_ptr<Mesh> genSubdividedPlane(int resolution); // Should generate a unit plane
     
+    void bind() const {
+        glBindVertexArray(m_vao);
+    }
 
     ~Mesh();
     

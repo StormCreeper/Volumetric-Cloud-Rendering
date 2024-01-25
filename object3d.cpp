@@ -15,6 +15,7 @@ void Object3D::render(GLuint program) const {
     
     setUniform(program, "u_texture", 0);
 
+    // Render mesh
     mesh->render();
     
     setUniform(program, "u_modelMat", glm::mat4(1.0f));

@@ -2,6 +2,8 @@
 #define FRAMEBUFFER_HPP
 
 #include <iostream>
+#include <random>
+#include <ctime>
 
 #include "gl_includes.hpp"
 #include "mesh.hpp"
@@ -12,7 +14,6 @@ public:
     GLuint m_position {};
     GLuint m_normal {};
     GLuint m_albedo {};
-    GLuint m_depth {};
 
     int m_Width {};
     int m_Height {};
@@ -42,12 +43,16 @@ public:
         glGenTextures(1, &m_normal);
         glBindTexture(GL_TEXTURE_2D, m_normal);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, m_Width, m_Height, 0, GL_RGB, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_normal, 0);
 
         // - Color + Specular color buffer
         glGenTextures(1, &m_albedo);
         glBindTexture(GL_TEXTURE_2D, m_albedo);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, m_Width, m_Height, 0, GL_RGB, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, m_albedo, 0);
 
         // - Tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
@@ -55,10 +60,11 @@ public:
         glDrawBuffers(3, attachments);
 
         // - Create and attach depth buffer (renderbuffer)
-        glGenRenderbuffers(1, &m_depth);
-        glBindRenderbuffer(GL_RENDERBUFFER, m_depth);
+        GLuint rboDepth;
+        glGenRenderbuffers(1, &rboDepth);
+        glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, m_Width, m_Height);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_depth);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
 
         // - Finally check if framebuffer is complete
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -68,7 +74,15 @@ public:
     void initMesh() {
         m_quad = Mesh::genPlane();
     }
+
+    ~FrameBuffer() {
+        glDeleteFramebuffers(1, &m_Buffer);
+        glDeleteTextures(1, &m_position);
+        glDeleteTextures(1, &m_normal);
+        glDeleteTextures(1, &m_albedo);
+    }
 };
+
 
 
 
