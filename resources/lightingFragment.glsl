@@ -25,6 +25,7 @@ struct Light {
 };
 
 uniform Light u_lights[MAX_LIGHTS];
+uniform int u_numLights;
 
 vec3 lightDir = normalize(u_lightPosition);
 
@@ -35,7 +36,7 @@ void main() {
 	vec3 diffuse = vec3(0);
 	vec3 ambient = vec3(0);
 
-	for (int i = 0; i < MAX_LIGHTS; i++) {
+	for (int i = 0; i < u_numLights; i++) {
 		if(u_lights[i].type == 0) {
 			ambient += albedo * u_lights[i].color * u_lights[i].intensity;
 			continue;

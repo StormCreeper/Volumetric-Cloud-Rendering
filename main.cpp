@@ -40,8 +40,36 @@ struct Light {
     float intensity;
 };
 
-Light g_lights[MAX_LIGHTS] {};
-int g_numLights = 0;
+
+
+struct Scene {
+    Light m_lights[MAX_LIGHTS] {};
+    int m_numLights = 0;
+
+    glm::vec3 m_domainOrigin;
+    glm::vec3 m_domainSize;
+
+
+
+    void setUniforms(GLuint lightingShader) {
+        for(int i = 0; i < g_scene.m_numLights; i++) {
+            setUniform(lightingShader, std::string("u_lights[" + std::to_string(i) + "].type").c_str(), m_lights[i].type);
+            setUniform(lightingShader, std::string("u_lights[" + std::to_string(i) + "].position").c_str(), m_lights[i].position);
+            setUniform(lightingShader, std::string("u_lights[" + std::to_string(i) + "].color").c_str(), m_lights[i].color);
+            setUniform(lightingShader, std::string("u_lights[" + std::to_string(i) + "].intensity").c_str(), m_lights[i].intensity);
+        }
+
+        setUniform(lightingShader, "u_numLights", m_numLights);
+    }
+};
+
+Scene g_scene {};
+
+void setDefaults() {
+
+}
+
+
 
 float g_fps = 0.0f;
 
@@ -169,12 +197,14 @@ void initScene() {
     g_objects[1]->setModelMatrix(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f, 10.0f, 10.0f)));
     g_objects[1]->setModelMatrix(glm::translate(g_objects[1]->getModelMatrix(), glm::vec3(0.0f, -1.0f, 0.0f)));
 
-    g_lights[g_numLights++] = Light{
+    g_scene.m_lights[g_scene.m_numLights++] = Light{
         1,
         glm::vec3(3.0f, 3.0f, 3.0f),
         glm::vec3(1.0, 1.0, 1.0),
         1.0f
     };
+
+    setDefaults();
 }
 
 void initCamera() {
@@ -228,14 +258,14 @@ void renderUI() {
 
     const char* items[] = { "Ambiant", "Point", "Directional" };
 
-    for(int i=0; i<g_numLights; i++) {
-        Light &light = g_lights[i];
+    for(int i=0; i<g_scene.m_numLights; i++) {
+        Light &light = g_scene.m_lights[i];
         if(ImGui::CollapsingHeader(std::string("Light " + std::to_string(i)).c_str())) {
             //ImGui::Text("Light %d", i);
 
             const char* comboLabel = items[light.type];
 
-            if (ImGui::BeginCombo(("Type" + std::to_string(i)).c_str(), comboLabel)) {
+            if (ImGui::BeginCombo(("Type" + std::to_string(i)).c_str(), comboLabel)) { // Combo box for type selection 
                 for (int n = 0; n < IM_ARRAYSIZE(items); n++) {
                     const bool is_selected = (comboLabel == items[n]);
                     if (ImGui::Selectable(items[n], is_selected)) {
@@ -254,8 +284,8 @@ void renderUI() {
             ImGui::SliderFloat(("Intensity" + std::to_string(i)).c_str(), &light.intensity, 0.0f, light.type == 0 ? 1.0f : 10.0f);
         }
     }
-    if(g_numLights < MAX_LIGHTS && ImGui::Button("Add light")) {
-        g_lights[g_numLights++] = Light{
+    if(g_scene.m_numLights < MAX_LIGHTS && ImGui::Button("Add light")) {
+        g_scene.m_lights[g_scene.m_numLights++] = Light{
             1,
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(1.0, 1.0, 1.0),
@@ -263,8 +293,8 @@ void renderUI() {
         };
         ImGui::SameLine();
     }
-    if(g_numLights > 0 && ImGui::Button("Remove light")) {
-        g_numLights--;
+    if(g_scene.m_numLights > 0 && ImGui::Button("Remove light")) {
+        g_scene.m_numLights--;
     }
 
     ImGui::End();
@@ -336,13 +366,6 @@ void render() {
     setUniform(g_lightingShader, "u_invProjMat", glm::inverse(projMatrix));
 
     setUniform(g_lightingShader, "u_time", static_cast<float>(glfwGetTime()));
-
-    for(int i = 0; i < g_numLights; i++) {
-        setUniform(g_lightingShader, std::string("u_lights[" + std::to_string(i) + "].type").c_str(), g_lights[i].type);
-        setUniform(g_lightingShader, std::string("u_lights[" + std::to_string(i) + "].position").c_str(), g_lights[i].position);
-        setUniform(g_lightingShader, std::string("u_lights[" + std::to_string(i) + "].color").c_str(), g_lights[i].color);
-        setUniform(g_lightingShader, std::string("u_lights[" + std::to_string(i) + "].intensity").c_str(), g_lights[i].intensity);
-    }
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, g_framebuffer->m_position);

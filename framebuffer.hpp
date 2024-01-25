@@ -1,3 +1,8 @@
+/*
+    framebuffer.hpp
+    author: Telo PHILIPPE
+*/
+
 #ifndef FRAMEBUFFER_HPP
 #define FRAMEBUFFER_HPP
 
