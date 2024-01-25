@@ -50,9 +50,8 @@ struct Scene {
     glm::vec3 m_domainSize;
 
 
-
     void setUniforms(GLuint lightingShader) {
-        for(int i = 0; i < g_scene.m_numLights; i++) {
+        for(int i = 0; i < m_numLights; i++) {
             setUniform(lightingShader, std::string("u_lights[" + std::to_string(i) + "].type").c_str(), m_lights[i].type);
             setUniform(lightingShader, std::string("u_lights[" + std::to_string(i) + "].position").c_str(), m_lights[i].position);
             setUniform(lightingShader, std::string("u_lights[" + std::to_string(i) + "].color").c_str(), m_lights[i].color);
@@ -60,13 +59,17 @@ struct Scene {
         }
 
         setUniform(lightingShader, "u_numLights", m_numLights);
+
+        setUniform(lightingShader, "u_domainOrigin", m_domainOrigin);
+        setUniform(lightingShader, "u_domainSize", m_domainSize);
     }
 };
 
 Scene g_scene {};
 
 void setDefaults() {
-
+    g_scene.m_domainOrigin = glm::vec3(-1, -1, -1);
+    g_scene.m_domainSize = glm::vec3(2, 2, 2);
 }
 
 
@@ -355,7 +358,6 @@ void render() {
     setUniform(g_lightingShader, "u_Position", 0);
     setUniform(g_lightingShader, "u_Normal", 1);
     setUniform(g_lightingShader, "u_Albedo", 2);
-    setUniform(g_lightingShader, "u_Random", 3);
 
     const glm::mat4 viewMatrix = g_camera.computeViewMatrix();
     const glm::mat4 projMatrix = g_camera.computeProjectionMatrix();
@@ -365,7 +367,7 @@ void render() {
     setUniform(g_lightingShader, "u_invViewMat", glm::inverse(viewMatrix));
     setUniform(g_lightingShader, "u_invProjMat", glm::inverse(projMatrix));
 
-    setUniform(g_lightingShader, "u_time", static_cast<float>(glfwGetTime()));
+    g_scene.setUniforms(g_lightingShader);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, g_framebuffer->m_position);
