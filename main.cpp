@@ -45,6 +45,7 @@ struct VolumeParams {
     float lightAbsorption;
 
     float scatteringG;
+    glm::vec4 phaseParams;
 };
 
 struct Scene {
@@ -73,6 +74,7 @@ struct Scene {
         setUniform(lightingShader, "u_cloudAbsorption", m_volumeParams.cloudAbsorption);
         setUniform(lightingShader, "u_lightAbsorption", m_volumeParams.lightAbsorption);
         setUniform(lightingShader, "u_scatteringG", m_volumeParams.scatteringG);
+        setUniform(lightingShader, "u_phaseParams", m_volumeParams.phaseParams);
         
     }
 };
@@ -87,6 +89,7 @@ void setDefaults() {
     g_scene.m_volumeParams.lightAbsorption = 1.0f;
 
     g_scene.m_volumeParams.scatteringG = 0.5f;
+    g_scene.m_volumeParams.phaseParams = glm::vec4(0.5f, 0.1f, 0.1f, 0.9f);
 }
 
 
@@ -331,6 +334,7 @@ void renderUI() {
     ImGui::SliderFloat("Light absorption", &g_scene.m_volumeParams.lightAbsorption, 0.0f, 2.0f);
 
     ImGui::SliderFloat("Scattering G", &g_scene.m_volumeParams.scatteringG, -1.0f, 1.0f);
+    ImGui::SliderFloat4("Phase params", &g_scene.m_volumeParams.phaseParams.x, 0.0f, 1.0f);
 
     ImGui::End();
 

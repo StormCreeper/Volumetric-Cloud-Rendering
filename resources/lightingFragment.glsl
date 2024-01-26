@@ -36,6 +36,7 @@ uniform float u_cloudAbsorption;
 uniform float u_lightAbsorption;
 
 uniform float u_scatteringG;
+uniform vec4 u_phaseParams;
 
 void swap(inout float a, inout float b) {
 	float tmp = a;
@@ -104,9 +105,15 @@ float sampleDensity(vec3 p) {
 	return d;
 }
 
-float HenyeyGreenstein(float g, float cosTheta) {
+float hg(float cosTheta, float g) {
 	float g2 = g * g;
 	return (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5) / (4.0 * PI);
+}
+
+float phase(float cosTheta) {
+	float blend = .5;
+	float hgBlend = hg(cosTheta, u_phaseParams.x) * (1-blend) + hg(cosTheta, -u_phaseParams.y) * blend;
+	return u_phaseParams.z + hgBlend*u_phaseParams.w;
 }
 
 float lightMarch(vec3 ro, Light light) {
@@ -167,7 +174,7 @@ void main() {
 			if(density > 0) {
 				for(int j = 0; j < u_numLights; j++) {
 					float lightTransmittance = lightMarch(p, u_lights[j]);
-					float scattering = HenyeyGreenstein(u_scatteringG, dot(rayDir, rayDir));
+					float scattering = phase(dot(rayDir, rayDir));
 					lightEnergy += density * stepSize * transmittance * lightTransmittance * scattering * u_lights[j].intensity * u_lights[j].color;
 				}
 				transmittance *= exp(-density * stepSize * u_cloudAbsorption);
