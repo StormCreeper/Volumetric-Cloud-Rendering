@@ -14,10 +14,11 @@ uniform mat4 u_invProjMat;
 
 #define MAX_LIGHTS 10
 
-#define MAX_STEPS 100
+#define MAX_STEPS 20
+#define MAX_LIGHT_STEPS 20
 
 struct Light {
-	int type; // 0 = ambiant, 1 = directional, 2 = point
+	int type; // 0 = ambiant, 1 = point, 2 = directional
 	vec3 position;
 	vec3 color;
 	float intensity;
@@ -81,10 +82,38 @@ float sampleDensity(vec3 p) {
 	// Coordinates in domain space
 	vec3 pDomain = (p - u_domainCenter) / u_domainSize * 0.5 + 0.5;
 
-	if(pDomain.x < 0.0 || pDomain.x > 1.0 || pDomain.y < 0.0 || pDomain.y > 1.0 || pDomain.z < 0.0 || pDomain.z > 1.0)
+	if(pDomain.x < -0.01 || pDomain.x > 1.01 || pDomain.y < -0.01 || pDomain.y > 1.01 || pDomain.z < -0.01 || pDomain.z > 1.01)
 		return 0.0;
 	
 	return 1.0;
+}
+
+float lightMarch(vec3 ro, Light light) {
+	vec3 lightDir = normalize(light.position - ro);
+
+	float tmin, tmax;
+	if(!projectToDomain(ro, lightDir, tmin, tmax)) return 0.0;
+
+	float t = tmin;
+	float maxT = tmax - tmin + 0.01;
+
+	if(light.type == 1) {
+		// Point light
+		maxT = min(maxT, length(light.position - ro));
+	}
+
+	float stepSize = maxT / MAX_LIGHT_STEPS;
+	
+	float totalDensity = 0.0;
+
+	for(int i = 0; i < MAX_LIGHT_STEPS; i++) {
+		vec3 p = ro + lightDir * t;
+		float d = sampleDensity(p);
+		totalDensity += d * stepSize;
+		t += stepSize;
+	}
+
+	return exp(-totalDensity);
 }
 
 void main() {
@@ -101,7 +130,7 @@ void main() {
 	vec3 rayOrigin = u_invViewMat[3].xyz;
 	
 	float transmittance = 1.0;
-	float lightEnergy = 0.0;
+	vec3 lightEnergy = vec3(0);
 
 	float tmin, tmax;
 	if(projectToDomain(rayOrigin, rayDir, tmin, tmax)) {
@@ -109,8 +138,15 @@ void main() {
 		float stepSize = (tmax - tmin) / MAX_STEPS;
 		for(int i = 0; i < MAX_STEPS; i++) {
 			vec3 p = rayOrigin + rayDir * t;
-			float d = sampleDensity(p);
-			transmittance *= exp(-d * stepSize);
+			float density = sampleDensity(p);
+
+			if(density > 0) {
+				for(int j = 0; j < u_numLights; j++) {
+					float lightTransmittance = lightMarch(p, u_lights[j]);
+					lightEnergy += density * stepSize * transmittance * lightTransmittance * u_lights[j].intensity * u_lights[j].color;
+				}
+				transmittance *= exp(-density * stepSize);
+			}
 			t += stepSize;
 		}
 	}
@@ -147,7 +183,7 @@ void main() {
 
 	}
 
-	vec3 finalColor = renderColor * transmittance;
+	vec3 finalColor = renderColor * transmittance + lightEnergy;
 
 
 
