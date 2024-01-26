@@ -40,14 +40,21 @@ struct Light {
     float intensity;
 };
 
+struct VolumeParams {
+    float cloudAbsorption;
+    float lightAbsorption;
 
+    float scatteringG;
+};
 
 struct Scene {
     Light m_lights[MAX_LIGHTS] {};
     int m_numLights = 0;
 
-    glm::vec3 m_domainCenter;
-    glm::vec3 m_domainSize;
+    glm::vec3 m_domainCenter {};
+    glm::vec3 m_domainSize {};
+
+    VolumeParams m_volumeParams {};
 
 
     void setUniforms(GLuint lightingShader) {
@@ -62,6 +69,11 @@ struct Scene {
 
         setUniform(lightingShader, "u_domainCenter", m_domainCenter);
         setUniform(lightingShader, "u_domainSize", m_domainSize);
+
+        setUniform(lightingShader, "u_cloudAbsorption", m_volumeParams.cloudAbsorption);
+        setUniform(lightingShader, "u_lightAbsorption", m_volumeParams.lightAbsorption);
+        setUniform(lightingShader, "u_scatteringG", m_volumeParams.scatteringG);
+        
     }
 };
 
@@ -70,6 +82,11 @@ Scene g_scene {};
 void setDefaults() {
     g_scene.m_domainCenter = glm::vec3(0, 0, 0);
     g_scene.m_domainSize = glm::vec3(1, 1, 1);
+
+    g_scene.m_volumeParams.cloudAbsorption = 1.0f;
+    g_scene.m_volumeParams.lightAbsorption = 1.0f;
+
+    g_scene.m_volumeParams.scatteringG = 0.5f;
 }
 
 
@@ -175,7 +192,7 @@ void initOpenGL() {
     g_framebuffer = std::make_shared<FrameBuffer>(1024, 768);
 
     // Disable v-sync
-    // glfwSwapInterval(0);
+    glfwSwapInterval(0);
 }
 
 void initGPUprogram() {
@@ -254,6 +271,7 @@ void renderUI() {
     ImGui::Begin("Performance", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
     ImGui::Text("FPS: %.1f", g_fps);
+    ImGui::Text("Frame time: %.3f ms", 1000.0f / g_fps);
 
     ImGui::End();
 
@@ -302,10 +320,15 @@ void renderUI() {
 
     ImGui::End();
 
-    ImGui::Begin("Domain", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Begin("Volume", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
     ImGui::SliderFloat3("Center", &g_scene.m_domainCenter.x, -10.0f, 10.0f);
     ImGui::SliderFloat3("Size", &g_scene.m_domainSize.x, 0.0f, 10.0f);
+
+    ImGui::SliderFloat("Cloud absorption", &g_scene.m_volumeParams.cloudAbsorption, 0.0f, 2.0f);
+    ImGui::SliderFloat("Light absorption", &g_scene.m_volumeParams.lightAbsorption, 0.0f, 2.0f);
+
+    ImGui::SliderFloat("Scattering G", &g_scene.m_volumeParams.scatteringG, -1.0f, 1.0f);
 
     ImGui::End();
 

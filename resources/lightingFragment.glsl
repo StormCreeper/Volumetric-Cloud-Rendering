@@ -17,6 +17,8 @@ uniform mat4 u_invProjMat;
 #define MAX_STEPS 20
 #define MAX_LIGHT_STEPS 20
 
+#define PI 3.1415926535897932384626433832795
+
 struct Light {
 	int type; // 0 = ambiant, 1 = point, 2 = directional
 	vec3 position;
@@ -29,6 +31,11 @@ uniform int u_numLights;
 
 uniform vec3 u_domainCenter;
 uniform vec3 u_domainSize;
+
+uniform float u_cloudAbsorption;
+uniform float u_lightAbsorption;
+
+uniform float u_scatteringG;
 
 void swap(inout float a, inout float b) {
 	float tmp = a;
@@ -84,8 +91,22 @@ float sampleDensity(vec3 p) {
 
 	if(pDomain.x < -0.01 || pDomain.x > 1.01 || pDomain.y < -0.01 || pDomain.y > 1.01 || pDomain.z < -0.01 || pDomain.z > 1.01)
 		return 0.0;
+
+	// Test density function
+
+	float dx = min(abs(pDomain.x - 0.0), abs(pDomain.x - 1.0)) * 5.0;
+	float dy = min(abs(pDomain.y - 0.0), abs(pDomain.y - 1.0)) * 5.0;
+	float dz = min(abs(pDomain.z - 0.0), abs(pDomain.z - 1.0)) * 5.0;
+
+	float d = min(min(dx, dy), dz) + sin(p.x * 4.0) * 0.1 + sin(p.y * 4.0) * 0.1 + sin(p.z * 4.0) * 0.1;
+	d = clamp(d, 0.0, 1.0);
 	
-	return 1.0;
+	return d;
+}
+
+float HenyeyGreenstein(float g, float cosTheta) {
+	float g2 = g * g;
+	return (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5) / (4.0 * PI);
 }
 
 float lightMarch(vec3 ro, Light light) {
@@ -114,7 +135,7 @@ float lightMarch(vec3 ro, Light light) {
 		t += stepSize;
 	}
 
-	return exp(-totalDensity);
+	return exp(-totalDensity * u_lightAbsorption);
 }
 
 void main() {
@@ -127,7 +148,7 @@ void main() {
 
 	vec4 clip = vec4(uv, -1.0, 1.0);
 	vec4 eye = vec4(vec2(u_invProjMat * clip), -1.0, 0.0);
-	vec3 rayDir = vec3(u_invViewMat * eye);
+	vec3 rayDir = normalize(vec3(u_invViewMat * eye));
 	vec3 rayOrigin = u_invViewMat[3].xyz;
 	
 	float transmittance = 1.0;
@@ -144,9 +165,10 @@ void main() {
 			if(density > 0) {
 				for(int j = 0; j < u_numLights; j++) {
 					float lightTransmittance = lightMarch(p, u_lights[j]);
-					lightEnergy += density * stepSize * transmittance * lightTransmittance * u_lights[j].intensity * u_lights[j].color;
+					float scattering = HenyeyGreenstein(u_scatteringG, dot(rayDir, rayDir));
+					lightEnergy += density * stepSize * transmittance * lightTransmittance * scattering * u_lights[j].intensity * u_lights[j].color;
 				}
-				transmittance *= exp(-density * stepSize);
+				transmittance *= exp(-density * stepSize * u_cloudAbsorption);
 
 				if(transmittance < 0.01) break;
 			}
