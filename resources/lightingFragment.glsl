@@ -92,13 +92,14 @@ float lightMarch(vec3 ro, Light light) {
 	vec3 lightDir = normalize(light.position - ro);
 
 	float tmin, tmax;
-	if(!projectToDomain(ro, lightDir, tmin, tmax)) return 0.0;
+	if(!projectToDomain(ro, lightDir, tmin, tmax)) return 1.0;
 
 	float t = tmin;
 	float maxT = tmax - tmin + 0.01;
 
 	if(light.type == 1) {
 		// Point light
+		if(tmax > length(light.position - ro)) return 1.0;
 		maxT = min(maxT, length(light.position - ro));
 	}
 
@@ -146,6 +147,8 @@ void main() {
 					lightEnergy += density * stepSize * transmittance * lightTransmittance * u_lights[j].intensity * u_lights[j].color;
 				}
 				transmittance *= exp(-density * stepSize);
+
+				if(transmittance < 0.01) break;
 			}
 			t += stepSize;
 		}
@@ -176,7 +179,10 @@ void main() {
 				lightDir= normalize(u_lights[i].position);
 			}
 			float diff = max(dot(normal, lightDir), 0.0);
-			diffuse += albedo * diff * u_lights[i].color * u_lights[i].intensity;
+
+			float lightTransmittance = lightMarch(position, u_lights[i]);
+
+			diffuse += albedo * diff * u_lights[i].color * u_lights[i].intensity * lightTransmittance;
 		}
 
 		renderColor = ambient + diffuse;
