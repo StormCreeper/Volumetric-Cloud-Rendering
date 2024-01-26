@@ -305,13 +305,15 @@ void renderUI() {
             ImGui::SliderFloat(("Intensity" + std::to_string(i)).c_str(), &light.intensity, 0.0f, light.type == 0 ? 1.0f : 10.0f);
         }
     }
-    if(g_scene.m_numLights < MAX_LIGHTS && ImGui::Button("Add light")) {
-        g_scene.m_lights[g_scene.m_numLights++] = Light{
-            1,
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0, 1.0, 1.0),
-            1.0f
-        };
+    if(g_scene.m_numLights < MAX_LIGHTS) {
+        if(ImGui::Button("Add light")) {
+            g_scene.m_lights[g_scene.m_numLights++] = Light{
+                1,
+                glm::vec3(0.0f, 0.0f, 0.0f),
+                glm::vec3(1.0, 1.0, 1.0),
+                1.0f
+            };
+        }
         ImGui::SameLine();
     }
     if(g_scene.m_numLights > 0 && ImGui::Button("Remove light")) {

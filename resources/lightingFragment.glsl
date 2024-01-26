@@ -116,13 +116,15 @@ float lightMarch(vec3 ro, Light light) {
 	if(!projectToDomain(ro, lightDir, tmin, tmax)) return 1.0;
 
 	float t = tmin;
-	float maxT = tmax - tmin + 0.01;
 
 	if(light.type == 1) {
 		// Point light
-		if(tmax > length(light.position - ro)) return 1.0;
-		maxT = min(maxT, length(light.position - ro));
+		float tmaxlight = length(light.position - ro);
+		tmax = min(tmax, tmaxlight);
+
+		if(tmin >= tmax) return 1.0;
 	}
+	float maxT = tmax - tmin + 0.01;
 
 	float stepSize = maxT / MAX_LIGHT_STEPS;
 	
