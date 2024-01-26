@@ -27,7 +27,7 @@ set(SOURCES
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_sources(${PROJECT_NAME} PRIVATE dep/glad/src/gl.c)
+target_sources(${PROJECT_NAME} PRIVATE dep/glad/src/glad.c)
 target_include_directories(${PROJECT_NAME} PRIVATE dep/glad/include/)
 
 add_subdirectory(dep/glfw)

@@ -8,7 +8,7 @@
 #ifndef GL_INCLUDES_HPP
 #define GL_INCLUDES_HPP
 
-#include <glad/gl.h>
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <glm/ext.hpp>

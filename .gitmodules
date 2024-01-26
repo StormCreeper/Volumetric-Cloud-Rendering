@@ -7,3 +7,6 @@
 [submodule "dep/imgui"]
 	path = dep/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "dep/glad"]
+	path = dep/glad
+	url = https://github.com/Dav1dde/glad.git
