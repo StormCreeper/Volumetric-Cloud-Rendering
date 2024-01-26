@@ -46,7 +46,7 @@ struct Scene {
     Light m_lights[MAX_LIGHTS] {};
     int m_numLights = 0;
 
-    glm::vec3 m_domainOrigin;
+    glm::vec3 m_domainCenter;
     glm::vec3 m_domainSize;
 
 
@@ -60,7 +60,7 @@ struct Scene {
 
         setUniform(lightingShader, "u_numLights", m_numLights);
 
-        setUniform(lightingShader, "u_domainOrigin", m_domainOrigin);
+        setUniform(lightingShader, "u_domainCenter", m_domainCenter);
         setUniform(lightingShader, "u_domainSize", m_domainSize);
     }
 };
@@ -68,8 +68,8 @@ struct Scene {
 Scene g_scene {};
 
 void setDefaults() {
-    g_scene.m_domainOrigin = glm::vec3(-1, -1, -1);
-    g_scene.m_domainSize = glm::vec3(2, 2, 2);
+    g_scene.m_domainCenter = glm::vec3(0, 0, 0);
+    g_scene.m_domainSize = glm::vec3(1, 1, 1);
 }
 
 
@@ -195,7 +195,7 @@ void initScene() {
     g_objects.push_back(std::make_shared<Object3D>(Mesh::genSphere(16)));
     g_objects.push_back(std::make_shared<Object3D>(Mesh::genSubdividedPlane(2)));
 
-    g_objects[0]->setModelMatrix(glm::identity<glm::mat4>());
+    g_objects[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, 0.0f)));
 
     g_objects[1]->setModelMatrix(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f, 10.0f, 10.0f)));
     g_objects[1]->setModelMatrix(glm::translate(g_objects[1]->getModelMatrix(), glm::vec3(0.0f, -1.0f, 0.0f)));
@@ -299,6 +299,13 @@ void renderUI() {
     if(g_scene.m_numLights > 0 && ImGui::Button("Remove light")) {
         g_scene.m_numLights--;
     }
+
+    ImGui::End();
+
+    ImGui::Begin("Domain", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+    ImGui::SliderFloat3("Center", &g_scene.m_domainCenter.x, -10.0f, 10.0f);
+    ImGui::SliderFloat3("Size", &g_scene.m_domainSize.x, 0.0f, 10.0f);
 
     ImGui::End();
 
