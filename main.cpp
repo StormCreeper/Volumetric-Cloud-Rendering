@@ -5,6 +5,7 @@
 #include "shader.hpp"
 #include "object3d.hpp"
 #include "framebuffer.hpp"
+#include "voxeltexture.hpp"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -32,6 +33,8 @@ Camera g_camera {};
 std::shared_ptr<FrameBuffer> g_framebuffer {};
 
 std::vector<std::shared_ptr<Object3D>> g_objects {};
+
+VoxelTexture g_voxelTexture {};
 
 struct Light {
     int type; // 0 = ambiant, 1 = point, 2 = directional
@@ -75,7 +78,6 @@ struct Scene {
         setUniform(lightingShader, "u_lightAbsorption", m_volumeParams.lightAbsorption);
         setUniform(lightingShader, "u_scatteringG", m_volumeParams.scatteringG);
         setUniform(lightingShader, "u_phaseParams", m_volumeParams.phaseParams);
-        
     }
 };
 
@@ -86,12 +88,11 @@ void setDefaults() {
     g_scene.m_domainSize = glm::vec3(1, 1, 1);
 
     g_scene.m_volumeParams.cloudAbsorption = 1.0f;
-    g_scene.m_volumeParams.lightAbsorption = 1.0f;
+    g_scene.m_volumeParams.lightAbsorption = 0.7f;
 
     g_scene.m_volumeParams.scatteringG = 0.5f;
-    g_scene.m_volumeParams.phaseParams = glm::vec4(0.5f, 0.1f, 0.1f, 0.9f);
+    g_scene.m_volumeParams.phaseParams = glm::vec4(0.68f, 0.1f, 0.1f, 1.0f);
 }
-
 
 
 float g_fps = 0.0f;
@@ -101,6 +102,8 @@ void windowSizeCallback(GLFWwindow *window, int width, int height) {
     g_camera.setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
     glViewport(0, 0, (GLint)width, (GLint)height);  // Dimension of the rendering region in the window
 }
+
+bool shiftPressed = false;
 
 // Executed each time a key is entered.
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
@@ -114,19 +117,34 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         if ((key == GLFW_KEY_ESCAPE || key == GLFW_KEY_Q)) {
             glfwSetWindowShouldClose(window, true);  // Closes the application if the escape key is pressed
         }
-
+        if(key == GLFW_KEY_LEFT_SHIFT) shiftPressed = true;
+    }
+    if(action == GLFW_RELEASE) {
+        if(key == GLFW_KEY_LEFT_SHIFT) shiftPressed = false;
     }
 }
 
 float g_cameraDistance = 5.0f;
 float g_cameraAngleX = 0.0f;
 
+float g_yaw = 0.0f;
+float g_pitch = 0.0f;
+
 // Scroll for zooming
 void scrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
-    g_cameraDistance -= yoffset * 0.1f;
+    /*g_cameraDistance -= yoffset * 0.1f;
     g_cameraDistance = std::max(g_cameraDistance, 0.1f);
 
-    g_cameraAngleX -= xoffset * 0.04f;
+    g_cameraAngleX -= xoffset * 0.04f;*/
+
+    if(shiftPressed) {
+        g_cameraDistance -= yoffset * 0.1f;
+        g_cameraDistance = std::max(g_cameraDistance, 0.1f);
+    }
+    else {
+        g_yaw += xoffset * 0.04f;
+        g_pitch += yoffset * 0.04f;
+    }
 }
 
 void errorCallback(int error, const char *desc) {
@@ -195,7 +213,7 @@ void initOpenGL() {
     g_framebuffer = std::make_shared<FrameBuffer>(1024, 768);
 
     // Disable v-sync
-    glfwSwapInterval(0);
+    // glfwSwapInterval(0);
 }
 
 void initGPUprogram() {
@@ -208,6 +226,8 @@ void initGPUprogram() {
     loadShader(g_lightingShader, GL_VERTEX_SHADER, "../resources/lightingVertex.glsl");
     loadShader(g_lightingShader, GL_FRAGMENT_SHADER, "../resources/lightingFragment.glsl");
     glLinkProgram(g_lightingShader);  // The main GPU program is ready to be handle streams of polygons
+
+    g_voxelTexture.generateTexture();
 }
 
 
@@ -403,6 +423,11 @@ void render() {
     setUniform(g_lightingShader, "u_invViewMat", glm::inverse(viewMatrix));
     setUniform(g_lightingShader, "u_invProjMat", glm::inverse(projMatrix));
 
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_3D, g_voxelTexture.textureID);
+
+    setUniform(g_lightingShader, "u_voxelTexture", 3);
+
     g_scene.setUniforms(g_lightingShader);
 
     glActiveTexture(GL_TEXTURE0);
@@ -437,8 +462,15 @@ void update(const float currentTimeInSec) {
     glm::vec3 targetPosition = glm::vec3(0.0f, 0.0f, 0.0f);
     g_camera.setTarget(targetPosition);
 
-    glm::vec3 cameraOffset = glm::normalize(glm::vec3(cos(g_cameraAngleX), 0.3f, sin(g_cameraAngleX))) * (1.1f + g_cameraDistance);
-    g_camera.setPosition(targetPosition + cameraOffset);
+    //glm::vec3 cameraOffset = glm::normalize(glm::vec3(cos(g_cameraAngleX), 0.3f, sin(g_cameraAngleX))) * (1.1f + g_cameraDistance);
+    glm::vec4 cameraOffset(0, 0, 1, 0);
+    
+    glm::mat4 rot1 = glm::rotate(glm::mat4(1), g_yaw,   glm::vec3(0, 1, 0));
+    glm::mat4 rot2 = glm::rotate(glm::mat4(1), g_pitch, glm::vec3(1, 0, 0));
+    
+    cameraOffset = g_cameraDistance * rot1 * rot2 * cameraOffset;
+    
+    g_camera.setPosition(targetPosition + glm::vec3(cameraOffset));
 }
 
 int main(int argc, char **argv) {

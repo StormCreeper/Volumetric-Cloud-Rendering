@@ -5,7 +5,7 @@ SET(CMAKE_CXX_STANDARD 11)
 SET(CMAKE_CXX_STANDARD_REQUIRED True)
 # add_compile_definitions(_MY_OPENGL_IS_33_)
 
-project(Fur_Rendering)
+project(IGR_Clouds)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -23,6 +23,7 @@ set(SOURCES
   gl_includes.hpp
   object3d.hpp
   framebuffer.hpp
+  voxeltexture.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

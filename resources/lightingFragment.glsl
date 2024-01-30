@@ -38,6 +38,8 @@ uniform float u_lightAbsorption;
 uniform float u_scatteringG;
 uniform vec4 u_phaseParams;
 
+uniform sampler3D u_voxelTexture;
+
 void swap(inout float a, inout float b) {
 	float tmp = a;
 	a = b;
@@ -92,6 +94,8 @@ float sampleDensity(vec3 p) {
 
 	if(pDomain.x < -0.01 || pDomain.x > 1.01 || pDomain.y < -0.01 || pDomain.y > 1.01 || pDomain.z < -0.01 || pDomain.z > 1.01)
 		return 0.0;
+
+	return texture(u_voxelTexture, pDomain).r;
 
 	// Test density function
 
