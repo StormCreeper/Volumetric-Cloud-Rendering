@@ -131,7 +131,7 @@ void main() {
 		}
 	}	
 
-    float p = fbm(vec3(coords) * 0.1f, 2) * 0.5 + 0.5;
+    float p = fbm(vec3(coords) * 0.02f, 2) * 0.5 + 0.5;
 	p *= minDist < 0.0 ? 1.0f : exp(-minDist * 10.f);
 
 	//p *= 1.0f - length(nPos);

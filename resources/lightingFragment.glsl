@@ -43,6 +43,9 @@ uniform vec4 u_phaseParams;
 uniform int MAX_STEPS;
 uniform int MAX_LIGHT_STEPS;
 
+uniform float u_stepSize;
+uniform float u_lightStepSize;
+
 uniform sampler3D u_voxelTexture;
 
 void swap(inout float a, inout float b) {
@@ -142,11 +145,11 @@ float lightMarch(vec3 ro, Light light) {
 	}
 	float maxT = tmax - tmin + 0.01;
 
-	float stepSize = maxT / MAX_LIGHT_STEPS;
+	float stepSize = max(maxT / MAX_LIGHT_STEPS, u_lightStepSize);
 	
 	float totalDensity = 0.0;
 
-	for(int i = 0; i < MAX_LIGHT_STEPS; i++) {
+	for(int i = 0; i < MAX_LIGHT_STEPS && t <= tmax; i++) {
 		vec3 p = ro + lightDir * t;
 		float d = sampleDensity(p);
 		totalDensity += d * stepSize;
@@ -154,6 +157,11 @@ float lightMarch(vec3 ro, Light light) {
 	}
 
 	return exp(-totalDensity * u_lightAbsorption);
+}
+
+vec3 getSkyColor(vec3 dir) {
+	vec3 color = dir;
+	return max(color, 0.);
 }
 
 void main() {
@@ -179,8 +187,8 @@ void main() {
 	if(projectToDomain(rayOrigin, rayDir, tmin, tmax)) {
 		float t = tmin;
 		tmax = min(tmax, trender);
-		float stepSize = (tmax - tmin) / MAX_STEPS;
-		for(int i = 0; i < MAX_STEPS; i++) {
+		float stepSize = max((tmax - tmin) / MAX_STEPS, u_stepSize);
+		for(int i = 0; i < MAX_STEPS && t < tmax; i++) {
 			vec3 p = rayOrigin + rayDir * t;
 			float density = sampleDensity(p);
 
@@ -203,7 +211,7 @@ void main() {
 	if(position == vec3(0)) {
 		// Sky color
 
-		renderColor = rayDir;
+		renderColor = getSkyColor(rayDir);
 	} else {
 
 		// Solid objects color

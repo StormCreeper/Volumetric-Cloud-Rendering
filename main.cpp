@@ -47,6 +47,9 @@ struct VolumeParams {
     int numSteps;
     int numLightSteps;
 
+    float stepSize;
+    float lightStepSize;
+
     float cloudAbsorption;
     float lightAbsorption;
     float densityMultiplier;
@@ -77,6 +80,8 @@ struct Scene {
 
         setUniform(lightingShader, "MAX_STEPS", m_volumeParams.numSteps);
         setUniform(lightingShader, "MAX_LIGHT_STEPS", m_volumeParams.numLightSteps);
+        setUniform(lightingShader, "u_stepSize", m_volumeParams.stepSize);
+        setUniform(lightingShader, "u_lightStepSize", m_volumeParams.lightStepSize);
 
         setUniform(lightingShader, "u_domainCenter", m_domainCenter);
         setUniform(lightingShader, "u_domainSize", m_domainSize);
@@ -322,6 +327,10 @@ void renderUI() {
 
     ImGui::SliderInt("Num steps", &g_scene.m_volumeParams.numSteps, 0, 200);
     ImGui::SliderInt("Num light steps", &g_scene.m_volumeParams.numLightSteps, 0, 100);
+
+    ImGui::SliderFloat("Step size", &g_scene.m_volumeParams.stepSize, 0.01f, 0.5f);
+    ImGui::SliderFloat("Light step size", &g_scene.m_volumeParams.lightStepSize, 0.01f, 0.5f);
+    
 
     ImGui::End();
 
