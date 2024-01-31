@@ -143,12 +143,12 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 }
 
 static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
-    glm::vec2 uv = glm::vec2(xpos, ypos) / glm::vec2(1024, 768) * 2.0f - 1.0f;
-    glm::vec4 clip = glm::vec4(-uv.x, uv.y, 1.0f, 1.0f);
-    glm::vec4 eye = glm::inverse(g_camera.computeProjectionMatrix()) * clip;
-    glm::vec4 world = -glm::inverse(g_camera.computeViewMatrix()) * eye;
+    //glm::vec2 uv = glm::vec2(xpos, ypos) / glm::vec2(1024, 768) * 2.0f - 1.0f;
+    //glm::vec4 clip = glm::vec4(-uv.x, uv.y, 1.0f, 1.0f);
+    //glm::vec4 eye = glm::inverse(g_camera.computeProjectionMatrix()) * clip;
+    //glm::vec4 world = -glm::inverse(g_camera.computeViewMatrix()) * eye;
 
-    g_objects[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(world.x, world.y, world.z)));
+    //g_objects[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(world.x, world.y, world.z)));
 }
 
 
@@ -242,7 +242,7 @@ void initOpenGL() {
     g_framebuffer = std::make_shared<FrameBuffer>(1024, 768);
 
     // Disable v-sync
-    // glfwSwapInterval(0);
+    glfwSwapInterval(0);
 }
 
 void initGPUprogram() {
@@ -255,8 +255,6 @@ void initGPUprogram() {
     loadShader(g_lightingShader, GL_VERTEX_SHADER, "../resources/lightingVertex.glsl");
     loadShader(g_lightingShader, GL_FRAGMENT_SHADER, "../resources/lightingFragment.glsl");
     glLinkProgram(g_lightingShader);  // The main GPU program is ready to be handle streams of polygons
-
-    g_voxelTexture.generateTexture();
 }
 
 
@@ -312,6 +310,8 @@ void clear() {
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 }
+
+bool g_triggerRecompute = true;
 
 void renderUI() {
     ImGui_ImplOpenGL3_NewFrame();
@@ -383,8 +383,8 @@ void renderUI() {
 
     ImGui::Begin("Volume", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
-    ImGui::SliderFloat3("Center", &g_scene.m_domainCenter.x, -10.0f, 10.0f);
-    ImGui::SliderFloat3("Size", &g_scene.m_domainSize.x, 0.0f, 10.0f);
+    if(ImGui::SliderFloat3("Center", &g_scene.m_domainCenter.x, -10.0f, 10.0f)) g_triggerRecompute = true;
+    if(ImGui::SliderFloat3("Size", &g_scene.m_domainSize.x, 0.0f, 10.0f)) g_triggerRecompute = true;
 
     ImGui::SliderFloat("Cloud absorption", &g_scene.m_volumeParams.cloudAbsorption, 0.0f, 2.0f);
     ImGui::SliderFloat("Light absorption", &g_scene.m_volumeParams.lightAbsorption, 0.0f, 2.0f);
@@ -508,6 +508,11 @@ void update(const float currentTimeInSec) {
     cameraOffset = g_cameraDistance * rot1 * rot2 * cameraOffset;
     
     g_camera.setPosition(targetPosition + glm::vec3(cameraOffset));
+
+    if(g_triggerRecompute) {
+        g_voxelTexture.generateTexture(g_scene.m_domainSize, g_scene.m_domainCenter);
+        g_triggerRecompute = false;
+    }
 }
 
 int main(int argc, char **argv) {

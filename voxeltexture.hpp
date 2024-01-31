@@ -13,10 +13,11 @@ public:
 
 public:
     VoxelTexture() {
-        dim = 256;
+        dim = 64;
     }
 
-    void generateTexture() {
+    void generateTexture(glm::vec3 targetSize, glm::vec3 targetOffest) {
+        std::cout << "Generating voxel texture..." << std::endl;
 
         if (shaderID) glDeleteProgram(shaderID);
 
@@ -33,6 +34,8 @@ public:
         }
 
         setUniform(shaderID, "u_resolution", glm::vec3(dim, dim, dim));
+        setUniform(shaderID, "u_targetSize", targetSize);
+        setUniform(shaderID, "u_targetOffset", targetOffest);
 
         glBindTexture(GL_TEXTURE_3D, textureID);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
