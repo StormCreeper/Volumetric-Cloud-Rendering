@@ -4,6 +4,10 @@ layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 layout (r32f, binding = 0) uniform image3D img_output;
 
+uniform vec3 u_resolution;
+
+uniform float u_time;
+
 float tseed = 0;
 uint rngState;
 
@@ -105,12 +109,32 @@ float fbm(vec3 pos, int octaves)  {
     return noiseSum;
 }
 
+#define NUM_SPHERES 10
+
 void main() {
 	ivec3 coords = ivec3(gl_GlobalInvocationID);
+	vec3 nPos = vec3(coords) / vec3(u_resolution) * 2.0 - 1.0;
 	
 	uint rngState = uint(uint(coords.x) * uint(1973) + uint(coords.y) * uint(12573) + uint(coords.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
+	uint rngState2 = 0;
 
-    float p = fbm(vec3(coords) * 1.0f, 8) * 0.5 + 0.5;
+	float minDist = 1000000.0;
+
+	for (int i = 0; i < NUM_SPHERES; i++) {
+		vec3 center = vec3(RandomFloat01(rngState2), RandomFloat01(rngState2), RandomFloat01(rngState2)) * 2.0 - 1.0;
+		float radius = RandomFloat01(rngState2) * 0.4 + 0.05;
+
+		float dist = length(nPos - center) - radius;
+
+		if (dist < minDist) {
+			minDist = dist;
+		}
+	}	
+
+    float p = fbm(vec3(coords) * 0.1f, 2) * 0.5 + 0.5;
+	p *= minDist < 0.0 ? 1.0f : exp(-minDist * 10.f);
+
+	//p *= 1.0f - length(nPos);
 	
 	imageStore(img_output, coords, vec4(p));
 }

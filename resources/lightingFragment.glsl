@@ -12,10 +12,10 @@ uniform mat4 u_projMat;
 uniform mat4 u_invViewMat;
 uniform mat4 u_invProjMat;
 
-#define MAX_LIGHTS 10
+#define MAX_LIGHTS 50
 
-#define MAX_STEPS 20
-#define MAX_LIGHT_STEPS 20
+//#define MAX_STEPS 80
+//#define MAX_LIGHT_STEPS 20
 
 #define PI 3.1415926535897932384626433832795
 
@@ -35,8 +35,13 @@ uniform vec3 u_domainSize;
 uniform float u_cloudAbsorption;
 uniform float u_lightAbsorption;
 
+uniform float u_densityMultiplier;
+
 uniform float u_scatteringG;
 uniform vec4 u_phaseParams;
+
+uniform int MAX_STEPS;
+uniform int MAX_LIGHT_STEPS;
 
 uniform sampler3D u_voxelTexture;
 
@@ -95,7 +100,7 @@ float sampleDensity(vec3 p) {
 	if(pDomain.x < -0.01 || pDomain.x > 1.01 || pDomain.y < -0.01 || pDomain.y > 1.01 || pDomain.z < -0.01 || pDomain.z > 1.01)
 		return 0.0;
 
-	return texture(u_voxelTexture, pDomain).r;
+	return texture(u_voxelTexture, pDomain).r * u_densityMultiplier;
 
 	// Test density function
 
@@ -163,6 +168,9 @@ void main() {
 	vec4 eye = vec4(vec2(u_invProjMat * clip), -1.0, 0.0);
 	vec3 rayDir = normalize(vec3(u_invViewMat * eye));
 	vec3 rayOrigin = u_invViewMat[3].xyz;
+
+	float trender = length(position - rayOrigin);
+	if(position == vec3(0)) trender = 1000000.0;
 	
 	float transmittance = 1.0;
 	vec3 lightEnergy = vec3(0);
@@ -170,6 +178,7 @@ void main() {
 	float tmin, tmax;
 	if(projectToDomain(rayOrigin, rayDir, tmin, tmax)) {
 		float t = tmin;
+		tmax = min(tmax, trender);
 		float stepSize = (tmax - tmin) / MAX_STEPS;
 		for(int i = 0; i < MAX_STEPS; i++) {
 			vec3 p = rayOrigin + rayDir * t;

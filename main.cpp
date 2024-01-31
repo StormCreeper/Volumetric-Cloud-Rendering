@@ -44,8 +44,12 @@ struct Light {
 };
 
 struct VolumeParams {
+    int numSteps;
+    int numLightSteps;
+
     float cloudAbsorption;
     float lightAbsorption;
+    float densityMultiplier;
 
     float scatteringG;
     glm::vec4 phaseParams;
@@ -71,11 +75,16 @@ struct Scene {
 
         setUniform(lightingShader, "u_numLights", m_numLights);
 
+        setUniform(lightingShader, "MAX_STEPS", m_volumeParams.numSteps);
+        setUniform(lightingShader, "MAX_LIGHT_STEPS", m_volumeParams.numLightSteps);
+
         setUniform(lightingShader, "u_domainCenter", m_domainCenter);
         setUniform(lightingShader, "u_domainSize", m_domainSize);
 
         setUniform(lightingShader, "u_cloudAbsorption", m_volumeParams.cloudAbsorption);
         setUniform(lightingShader, "u_lightAbsorption", m_volumeParams.lightAbsorption);
+        setUniform(lightingShader, "u_densityMultiplier", m_volumeParams.densityMultiplier);
+
         setUniform(lightingShader, "u_scatteringG", m_volumeParams.scatteringG);
         setUniform(lightingShader, "u_phaseParams", m_volumeParams.phaseParams);
     }
@@ -84,11 +93,15 @@ struct Scene {
 Scene g_scene {};
 
 void setDefaults() {
+    g_scene.m_volumeParams.numSteps = 80;
+    g_scene.m_volumeParams.numLightSteps = 20;
+
     g_scene.m_domainCenter = glm::vec3(0, 0, 0);
-    g_scene.m_domainSize = glm::vec3(1, 1, 1);
+    g_scene.m_domainSize = glm::vec3(5, 5, 5);
 
     g_scene.m_volumeParams.cloudAbsorption = 1.0f;
     g_scene.m_volumeParams.lightAbsorption = 0.7f;
+    g_scene.m_volumeParams.densityMultiplier = 4.0f;
 
     g_scene.m_volumeParams.scatteringG = 0.5f;
     g_scene.m_volumeParams.phaseParams = glm::vec4(0.68f, 0.1f, 0.1f, 1.0f);
@@ -123,6 +136,16 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         if(key == GLFW_KEY_LEFT_SHIFT) shiftPressed = false;
     }
 }
+
+static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
+    glm::vec2 uv = glm::vec2(xpos, ypos) / glm::vec2(1024, 768) * 2.0f - 1.0f;
+    glm::vec4 clip = glm::vec4(-uv.x, uv.y, 1.0f, 1.0f);
+    glm::vec4 eye = glm::inverse(g_camera.computeProjectionMatrix()) * clip;
+    glm::vec4 world = -glm::inverse(g_camera.computeViewMatrix()) * eye;
+
+    g_objects[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(world.x, world.y, world.z)));
+}
+
 
 float g_cameraDistance = 5.0f;
 float g_cameraAngleX = 0.0f;
@@ -182,6 +205,7 @@ void initGLFW() {
     glfwSetWindowSizeCallback(g_window, windowSizeCallback);
     glfwSetKeyCallback(g_window, keyCallback);
     glfwSetScrollCallback(g_window, scrollCallback);
+    glfwSetCursorPosCallback(g_window, cursorPositionCallback);
 }
 
 void initImGui() {
@@ -296,6 +320,9 @@ void renderUI() {
     ImGui::Text("FPS: %.1f", g_fps);
     ImGui::Text("Frame time: %.3f ms", 1000.0f / g_fps);
 
+    ImGui::SliderInt("Num steps", &g_scene.m_volumeParams.numSteps, 0, 200);
+    ImGui::SliderInt("Num light steps", &g_scene.m_volumeParams.numLightSteps, 0, 100);
+
     ImGui::End();
 
     ImGui::Begin("Lights", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
@@ -352,6 +379,7 @@ void renderUI() {
 
     ImGui::SliderFloat("Cloud absorption", &g_scene.m_volumeParams.cloudAbsorption, 0.0f, 2.0f);
     ImGui::SliderFloat("Light absorption", &g_scene.m_volumeParams.lightAbsorption, 0.0f, 2.0f);
+    ImGui::SliderFloat("Density multiplier", &g_scene.m_volumeParams.densityMultiplier, 0.0f, 4.0f);
 
     ImGui::SliderFloat("Scattering G", &g_scene.m_volumeParams.scatteringG, -1.0f, 1.0f);
     ImGui::SliderFloat4("Phase params", &g_scene.m_volumeParams.phaseParams.x, 0.0f, 1.0f);

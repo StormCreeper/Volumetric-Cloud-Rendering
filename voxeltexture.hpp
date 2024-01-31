@@ -13,7 +13,7 @@ public:
 
 public:
     VoxelTexture() {
-        dim = 64;
+        dim = 256;
     }
 
     void generateTexture() {
@@ -31,6 +31,8 @@ public:
         if (!textureID) {
             glGenTextures(1, &textureID);
         }
+
+        setUniform(shaderID, "u_resolution", glm::vec3(dim, dim, dim));
 
         glBindTexture(GL_TEXTURE_3D, textureID);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
