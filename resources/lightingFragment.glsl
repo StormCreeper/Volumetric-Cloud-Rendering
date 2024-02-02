@@ -130,6 +130,8 @@ float phase(float cosTheta) {
 
 float lightMarch(vec3 ro, Light light) {
 	vec3 lightDir = normalize(light.position - ro);
+	if(light.type == 2) lightDir = normalize(light.position);
+	if(light.type == 0) return 1.0;
 
 	float tmin, tmax;
 	if(!projectToDomain(ro, lightDir, tmin, tmax)) return 1.0;
@@ -160,7 +162,7 @@ float lightMarch(vec3 ro, Light light) {
 }
 
 vec3 getSkyColor(vec3 dir) {
-	vec3 color = dir;
+	vec3 color = vec3(0.2, 0.4, 0.6) * (1.0 - dir.y) + vec3(0.8, 0.9, 1.0) * dir.y;
 	return max(color, 0.);
 }
 
@@ -195,8 +197,8 @@ void main() {
 			if(density > 0) {
 				for(int j = 0; j < u_numLights; j++) {
 					float lightTransmittance = lightMarch(p, u_lights[j]);
-					float scattering = phase(dot(rayDir, rayDir));
-					lightEnergy += density * stepSize * transmittance * lightTransmittance * scattering * u_lights[j].intensity * u_lights[j].color;
+					float phase = phase(dot(rayDir, rayDir));
+					lightEnergy += density * stepSize * transmittance * lightTransmittance * phase * u_lights[j].intensity * u_lights[j].color;
 				}
 				transmittance *= exp(-density * stepSize * u_cloudAbsorption);
 

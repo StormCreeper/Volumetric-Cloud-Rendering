@@ -103,8 +103,8 @@ float fbm(vec3 pos, int octaves)  {
     for(int i = 0; i < octaves; ++i) {
         noiseSum += snoise(pos * frequency + vec3(i * 100.02341, 121 + i * 200.0354310, 121 + i * 150.02451)) * amplitude;
         ampSum += amplitude;
-        amplitude *= 0.5;
-        frequency *= 2.0;
+        amplitude *= 0.7;
+        frequency *= 2.58;
     }
 
     return noiseSum;
@@ -131,11 +131,23 @@ void main() {
 			minDist = dist;
 		}
 	}	
+	
+	vec3 windDir = vec3(0.0, 0.0, 1.0);
+	float windSpeed = 0.1;
 
-    float p = fbm(vec3(nPos) * 1.f, 4) * 0.5 + 0.5;
-	p *= minDist < 0.0 ? 1.0f : exp(-minDist * 3.f);
+	vec3 sizing = vec3(0.1, 0.2, 0.1) * 0.5;
+    float p = fbm(vec3(nPos) * sizing + windDir * windSpeed * u_time * 0.8, 4) * 0.5 + 0.1;
+
+	vec3 coverageSizing = vec3(0.01, 0.0, 0.01);
+	float cloudCoverage = fbm(vec3(nPos) * coverageSizing + windDir * windSpeed * u_time, 2) * 0.5 - 0.1;
+	
+	p *= cloudCoverage;
+
+	//p *= minDist < 0.0 ? 1.0f : exp(-minDist * 3.f);
 
 	//p *= 1.0f - length(nPos);
+
+	p = clamp(p, 0.0, 1.0);
 	
 	imageStore(img_output, coords, vec4(p));
 }

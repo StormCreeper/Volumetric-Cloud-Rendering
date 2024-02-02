@@ -58,14 +58,20 @@ struct VolumeParams {
     glm::vec4 phaseParams;
 };
 
+struct GenerationParams {
+    glm::vec3 domainCenter {};
+    glm::vec3 domainSize {};
+
+    glm::vec3 worldOffset {};
+    glm::vec3 worldSize {};
+};
+
 struct Scene {
     Light m_lights[MAX_LIGHTS] {};
     int m_numLights = 0;
 
-    glm::vec3 m_domainCenter {};
-    glm::vec3 m_domainSize {};
-
     VolumeParams m_volumeParams {};
+    GenerationParams m_generationParams {};
 
 
     void setUniforms(GLuint lightingShader) {
@@ -83,15 +89,17 @@ struct Scene {
         setUniform(lightingShader, "u_stepSize", m_volumeParams.stepSize);
         setUniform(lightingShader, "u_lightStepSize", m_volumeParams.lightStepSize);
 
-        setUniform(lightingShader, "u_domainCenter", m_domainCenter);
-        setUniform(lightingShader, "u_domainSize", m_domainSize);
-
         setUniform(lightingShader, "u_cloudAbsorption", m_volumeParams.cloudAbsorption);
         setUniform(lightingShader, "u_lightAbsorption", m_volumeParams.lightAbsorption);
         setUniform(lightingShader, "u_densityMultiplier", m_volumeParams.densityMultiplier);
 
         setUniform(lightingShader, "u_scatteringG", m_volumeParams.scatteringG);
         setUniform(lightingShader, "u_phaseParams", m_volumeParams.phaseParams);
+
+        
+
+        setUniform(lightingShader, "u_domainCenter", m_generationParams.domainCenter);
+        setUniform(lightingShader, "u_domainSize", m_generationParams.domainSize);
     }
 };
 
@@ -101,8 +109,8 @@ void setDefaults() {
     g_scene.m_volumeParams.numSteps = 80;
     g_scene.m_volumeParams.numLightSteps = 20;
 
-    g_scene.m_domainCenter = glm::vec3(0, 0, 0);
-    g_scene.m_domainSize = glm::vec3(5, 5, 5);
+    g_scene.m_generationParams.domainCenter = glm::vec3(0, 30, 0);
+    g_scene.m_generationParams.domainSize = glm::vec3(80, 10, 80);
 
     g_scene.m_volumeParams.cloudAbsorption = 1.0f;
     g_scene.m_volumeParams.lightAbsorption = 0.7f;
@@ -143,12 +151,15 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 }
 
 static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
-    //glm::vec2 uv = glm::vec2(xpos, ypos) / glm::vec2(1024, 768) * 2.0f - 1.0f;
-    //glm::vec4 clip = glm::vec4(-uv.x, uv.y, 1.0f, 1.0f);
-    //glm::vec4 eye = glm::inverse(g_camera.computeProjectionMatrix()) * clip;
-    //glm::vec4 world = -glm::inverse(g_camera.computeViewMatrix()) * eye;
+    glm::vec2 uv = glm::vec2(xpos, ypos) / glm::vec2(1024, 768) * 2.0f - 1.0f;
+    glm::vec4 clip = glm::vec4(uv.x, -uv.y, 0.99f, 1.0f);
+    glm::vec4 eye = glm::inverse(g_camera.computeProjectionMatrix()) * clip;
+    glm::vec4 world = glm::inverse(g_camera.computeViewMatrix()) * eye;
+    world /= world.w;
 
     //g_objects[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(world.x, world.y, world.z)));
+
+    //g_scene.m_lights[0].position = glm::vec3(world.x, world.y, world.z);
 }
 
 
@@ -242,7 +253,7 @@ void initOpenGL() {
     g_framebuffer = std::make_shared<FrameBuffer>(1024, 768);
 
     // Disable v-sync
-    glfwSwapInterval(0);
+    // glfwSwapInterval(0);
 }
 
 void initGPUprogram() {
@@ -264,12 +275,12 @@ void initScene() {
 
     g_objects[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, 0.0f)));
 
-    g_objects[1]->setModelMatrix(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f, 10.0f, 10.0f)));
+    g_objects[1]->setModelMatrix(glm::scale(glm::mat4(1.0f), glm::vec3(40.0f, 10.0f, 40.0f)));
     g_objects[1]->setModelMatrix(glm::translate(g_objects[1]->getModelMatrix(), glm::vec3(0.0f, -1.0f, 0.0f)));
 
     g_scene.m_lights[g_scene.m_numLights++] = Light{
-        1,
-        glm::vec3(3.0f, 3.0f, 3.0f),
+        2,
+        glm::vec3(0.5f, 1.0f, 0.5f),
         glm::vec3(1.0, 1.0, 1.0),
         1.0f
     };
@@ -284,7 +295,7 @@ void initCamera() {
 
     g_camera.setPosition(glm::vec3(0.0, 0.0, 3.0));
     g_camera.setNear(0.1);
-    g_camera.setFar(80);
+    g_camera.setFar(200);
 
     g_camera.setFoV(90);
 }
@@ -331,7 +342,6 @@ void renderUI() {
     ImGui::SliderFloat("Step size", &g_scene.m_volumeParams.stepSize, 0.01f, 0.5f);
     ImGui::SliderFloat("Light step size", &g_scene.m_volumeParams.lightStepSize, 0.01f, 0.5f);
     
-
     ImGui::End();
 
     ImGui::Begin("Lights", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
@@ -383,8 +393,8 @@ void renderUI() {
 
     ImGui::Begin("Volume", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
-    if(ImGui::SliderFloat3("Center", &g_scene.m_domainCenter.x, -10.0f, 10.0f)) g_triggerRecompute = true;
-    if(ImGui::SliderFloat3("Size", &g_scene.m_domainSize.x, 0.0f, 10.0f)) g_triggerRecompute = true;
+    if(ImGui::SliderFloat3("Center", &g_scene.m_generationParams.domainCenter.x, -10.0f, 10.0f)) g_triggerRecompute = true;
+    if(ImGui::SliderFloat3("Size", &g_scene.m_generationParams.domainSize.x, 0.0f, 10.0f)) g_triggerRecompute = true;
 
     ImGui::SliderFloat("Cloud absorption", &g_scene.m_volumeParams.cloudAbsorption, 0.0f, 2.0f);
     ImGui::SliderFloat("Light absorption", &g_scene.m_volumeParams.lightAbsorption, 0.0f, 2.0f);
@@ -480,6 +490,8 @@ void render() {
     renderUI();
 }
 
+
+int frameCount = 0;
 // Update any accessible variable based on the current time
 void update(const float currentTimeInSec) {
 
@@ -509,10 +521,14 @@ void update(const float currentTimeInSec) {
     
     g_camera.setPosition(targetPosition + glm::vec3(cameraOffset));
 
+    if(frameCount % 5 == 0) g_triggerRecompute = true;
+
     if(g_triggerRecompute) {
-        g_voxelTexture.generateTexture(g_scene.m_domainSize, g_scene.m_domainCenter);
+        g_voxelTexture.generateTexture(g_scene.m_generationParams.domainSize, g_scene.m_generationParams.domainCenter);
         g_triggerRecompute = false;
     }
+
+    frameCount++;
 }
 
 int main(int argc, char **argv) {
