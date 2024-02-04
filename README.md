@@ -13,13 +13,13 @@ I re-used some boilerplate code from the first practical project of this class (
 ## Implemented
 - Traditionnal mesh rendering with rasterization
 - Deferred rendering pipeline
-- Basic volume raymarching and lighting, with multiple lights
+- Volume raymarching and lighting, with multiple lights
 - GUI to configure the lights and volume parameters
-- Simple density function in the shader
-## Todo
 - Volume traversing in a pre-computed texture instead of mathematical function
 - Compute the texture in a compute shader
+## Todo
 - More accurated cloud volume generation with different kinds of noise
+- Render the clouds at quarter resolution to speedup the rendering pass
 ## Renders
 Here are some renders with a basic density function and colored lights  
 ![Render 1](images/Render1.png)  
@@ -29,4 +29,6 @@ First success with a 3D texture for the density map.
 Changed the sky and volume shape to make it look like clouds:  
 ![Render 4](images/clouds.png)
 Added a time offset and recomputing every 5 frames:  
-![Render 5](images/clouds.gif)
+
+https://github.com/StormCreeper/Volumetric-Cloud-Rendering/assets/33285021/3514d8f1-56ba-4fa0-9bd2-03aa92fe8745
+
