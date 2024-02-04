@@ -234,7 +234,7 @@ void main() {
 			}
 			float diff = max(dot(normal, lightDir), 0.0);
 
-			float lightTransmittance = lightMarch(position, u_lights[i]);
+			float lightTransmittance = 0.5 + 0.5 * lightMarch(position, u_lights[i]); // Arbitrary, to account for ambient light
 
 			diffuse += albedo * diff * u_lights[i].color * u_lights[i].intensity * lightTransmittance;
 		}

@@ -9,11 +9,13 @@ public:
     GLuint textureID {};
     GLuint shaderID {};
     
-    GLuint dim {};
+    GLuint dimXZ {};
+    GLuint dimY {};
 
 public:
     VoxelTexture() {
-        dim = 256;
+        dimXZ = 256;
+        dimY = 32;
     }
 
     void generateTexture(glm::vec3 targetSize, glm::vec3 targetOffest) {
@@ -33,7 +35,7 @@ public:
             glGenTextures(1, &textureID);
         }
 
-        setUniform(shaderID, "u_resolution", glm::vec3(dim, dim, dim));
+        setUniform(shaderID, "u_resolution", glm::vec3(dimXZ, dimY, dimXZ));
         setUniform(shaderID, "u_targetSize", targetSize);
         setUniform(shaderID, "u_targetOffset", targetOffest);
         setUniform(shaderID, "u_time", (float)glfwGetTime());
@@ -42,10 +44,10 @@ public:
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-        glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, dim, dim, dim, 0, GL_RED, GL_FLOAT, nullptr);
+        glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, dimXZ, dimY, dimXZ, 0, GL_RED, GL_FLOAT, nullptr);
 
         glBindImageTexture(0, textureID, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32F);
-        glDispatchCompute(dim/8, dim/8, dim/8);
+        glDispatchCompute(dimXZ/8, dimY/8, dimXZ/8);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F);
         glBindTexture(GL_TEXTURE_3D, 0);

@@ -9,6 +9,9 @@ uniform vec3 u_targetSize;
 uniform vec3 u_targetOffset;
 uniform float u_time;
 
+uniform vec3 u_windDir;
+uniform float u_windSpeed;
+
 float tseed = 0;
 uint rngState;
 
@@ -110,44 +113,36 @@ float fbm(vec3 pos, int octaves)  {
     return noiseSum;
 }
 
-#define NUM_SPHERES 50
-
 void main() {
 	ivec3 coords = ivec3(gl_GlobalInvocationID);
 	vec3 nPos = (vec3(coords) / vec3(u_resolution) * 2.0 - 1.0) * u_targetSize + u_targetOffset;
 	
 	uint rngState = uint(uint(coords.x) * uint(1973) + uint(coords.y) * uint(12573) + uint(coords.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
 	uint rngState2 = 0;
-
-	float minDist = 1000000.0;
-
-	for (int i = 0; i < NUM_SPHERES; i++) {
-		vec3 center = (vec3(RandomFloat01(rngState2), RandomFloat01(rngState2), RandomFloat01(rngState2)) * 2.0 - 1.0) * 25.;
-		float radius = RandomFloat01(rngState2) * 4.0 + 0.5;
-
-		float dist = length(nPos - center) - radius;
-
-		if (dist < minDist) {
-			minDist = dist;
-		}
-	}	
 	
 	vec3 windDir = vec3(0.0, 0.0, 1.0);
-	float windSpeed = 0.1;
-
-	vec3 sizing = vec3(0.1, 0.2, 0.1) * 0.5;
-    float p = fbm(vec3(nPos) * sizing + windDir * windSpeed * u_time * 0.8, 4) * 0.5 + 0.1;
+	float windSpeed = 5;
 
 	vec3 coverageSizing = vec3(0.01, 0.0, 0.01);
-	float cloudCoverage = fbm(vec3(nPos) * coverageSizing + windDir * windSpeed * u_time, 2) * 0.5 - 0.1;
+	float cloudCoverage = fbm(vec3(nPos + windDir * windSpeed * u_time) * coverageSizing, 2) * 0.5 - 0.1;
+	cloudCoverage = max(cloudCoverage, 0.0);
 	
-	p *= cloudCoverage;
+	float normalizedHeight = (coords.y / u_resolution.y) * 2.0 - 1.0;
+	cloudCoverage *= 1.0 - pow(abs(normalizedHeight), 1.5);
 
-	//p *= minDist < 0.0 ? 1.0f : exp(-minDist * 3.f);
-
-	//p *= 1.0f - length(nPos);
-
-	p = clamp(p, 0.0, 1.0);
 	
-	imageStore(img_output, coords, vec4(p));
+	vec3 detailsSizing = vec3(0.1, 0.2, 0.1) * 0.5;
+	
+	if(cloudCoverage > 0.0) {
+		float details = (fbm(vec3(nPos + windDir * windSpeed * u_time) * detailsSizing, 4) * 0.5 + 0.5) * 0.8;
+		cloudCoverage -= details * cloudCoverage;
+	}
+	//cloudCoverage *= 
+
+
+	cloudCoverage = pow(cloudCoverage, 1.5);
+
+	cloudCoverage = clamp(cloudCoverage, 0.0, 1.0);
+	
+	imageStore(img_output, coords, vec4(cloudCoverage));
 }
