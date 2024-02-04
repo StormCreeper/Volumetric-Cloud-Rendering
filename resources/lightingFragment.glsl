@@ -166,22 +166,7 @@ vec3 getSkyColor(vec3 dir) {
 	return max(color, 0.);
 }
 
-void main() {
-	vec3 albedo = texture(u_Albedo, TexCoords).rgb;
-	vec3 normal = texture(u_Normal, TexCoords).rgb;
-	vec3 position = texture(u_Position, TexCoords).rgb;
-
-	// Raymarching
-	vec2 uv = TexCoords * 2.0 - 1.0;
-
-	vec4 clip = vec4(uv, -1.0, 1.0);
-	vec4 eye = vec4(vec2(u_invProjMat * clip), -1.0, 0.0);
-	vec3 rayDir = normalize(vec3(u_invViewMat * eye));
-	vec3 rayOrigin = u_invViewMat[3].xyz;
-
-	float trender = length(position - rayOrigin);
-	if(position == vec3(0)) trender = 1000000.0;
-	
+vec4 raymarchCloud(vec3 rayOrigin, vec3 rayDir, float trender) {
 	float transmittance = 1.0;
 	vec3 lightEnergy = vec3(0);
 
@@ -208,39 +193,62 @@ void main() {
 		}
 	}
 
+	return vec4(lightEnergy, transmittance);
+}
+
+vec3 computeRenderColor(vec3 albedo, vec3 normal, vec3 position) {
+	vec3 diffuse = vec3(0);
+	vec3 ambient = vec3(0);
+
+	for (int i = 0; i < u_numLights; i++) {
+		if(u_lights[i].type == 0) {
+			ambient += albedo * u_lights[i].color * u_lights[i].intensity;
+			continue;
+		}
+		vec3 lightDir;
+		if(u_lights[i].type == 1) {
+			lightDir= normalize(u_lights[i].position - texture(u_Position, TexCoords).xyz);
+		} else {
+			lightDir= normalize(u_lights[i].position);
+		}
+		float diff = max(dot(normal, lightDir), 0.0);
+
+		float lightTransmittance = 0.5 + 0.5 * lightMarch(position, u_lights[i]); // Arbitrary, to account for ambient light
+
+		diffuse += albedo * diff * u_lights[i].color * u_lights[i].intensity * lightTransmittance;
+	}
+
+	return ambient + diffuse;
+}
+
+void main() {
+	vec3 albedo = texture(u_Albedo, TexCoords).rgb;
+	vec3 normal = texture(u_Normal, TexCoords).rgb;
+	vec3 position = texture(u_Position, TexCoords).rgb;
+
+	// Raymarching
+	vec2 uv = TexCoords * 2.0 - 1.0;
+
+	vec4 clip = vec4(uv, -1.0, 1.0);
+	vec4 eye = vec4(vec2(u_invProjMat * clip), -1.0, 0.0);
+	vec3 rayDir = normalize(vec3(u_invViewMat * eye));
+	vec3 rayOrigin = u_invViewMat[3].xyz;
+
+	float trender = length(position - rayOrigin);
+	if(position == vec3(0)) trender = 1000000.0;
+	
+	vec4 cloudColor = raymarchCloud(rayOrigin, rayDir, trender);
+	vec3 lightEnergy = cloudColor.rgb;
+	float transmittance = cloudColor.a;
+
 	vec3 renderColor = vec3(0);
 
 	if(position == vec3(0)) {
 		// Sky color
-
 		renderColor = getSkyColor(rayDir);
 	} else {
-
 		// Solid objects color
-
-		vec3 diffuse = vec3(0);
-		vec3 ambient = vec3(0);
-
-		for (int i = 0; i < u_numLights; i++) {
-			if(u_lights[i].type == 0) {
-				ambient += albedo * u_lights[i].color * u_lights[i].intensity;
-				continue;
-			}
-			vec3 lightDir;
-			if(u_lights[i].type == 1) {
-				lightDir= normalize(u_lights[i].position - texture(u_Position, TexCoords).xyz);
-			} else {
-				lightDir= normalize(u_lights[i].position);
-			}
-			float diff = max(dot(normal, lightDir), 0.0);
-
-			float lightTransmittance = 0.5 + 0.5 * lightMarch(position, u_lights[i]); // Arbitrary, to account for ambient light
-
-			diffuse += albedo * diff * u_lights[i].color * u_lights[i].intensity * lightTransmittance;
-		}
-
-		renderColor = ambient + diffuse;
-
+		renderColor = computeRenderColor(albedo, normal, position);
 	}
 
 	vec3 finalColor = renderColor * transmittance + lightEnergy;
