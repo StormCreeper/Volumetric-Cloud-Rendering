@@ -106,11 +106,14 @@ struct Scene {
 Scene g_scene {};
 
 void setDefaults() {
-    g_scene.m_volumeParams.numSteps = 80;
-    g_scene.m_volumeParams.numLightSteps = 20;
+    g_scene.m_volumeParams.numSteps = 30;
+    g_scene.m_volumeParams.numLightSteps = 10;
+
+    g_scene.m_volumeParams.stepSize = 0.01f;
+    g_scene.m_volumeParams.lightStepSize = 0.01f;
 
     g_scene.m_generationParams.domainCenter = glm::vec3(0, 30, 0);
-    g_scene.m_generationParams.domainSize = glm::vec3(80, 10, 80);
+    g_scene.m_generationParams.domainSize = glm::vec3(200, 10, 200);
 
     g_scene.m_volumeParams.cloudAbsorption = 1.0f;
     g_scene.m_volumeParams.lightAbsorption = 0.7f;

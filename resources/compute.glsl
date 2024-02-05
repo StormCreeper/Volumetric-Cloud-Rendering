@@ -128,13 +128,14 @@ void main() {
 	cloudCoverage = max(cloudCoverage, 0.0);
 	
 	float normalizedHeight = (coords.y / u_resolution.y) * 2.0 - 1.0;
-	cloudCoverage *= 1.0 - pow(abs(normalizedHeight), 1.5);
-
+	float heightFactor = 1.0 - abs(normalizedHeight);
+	
+	cloudCoverage *= heightFactor;
 	
 	vec3 detailsSizing = vec3(0.1, 0.2, 0.1) * 0.5;
 	
 	if(cloudCoverage > 0.0) {
-		float details = (fbm(vec3(nPos + windDir * windSpeed * u_time) * detailsSizing, 4) * 0.5 + 0.5) * 0.8;
+		float details = (fbm(vec3(nPos + windDir * windSpeed * u_time * 1.5) * detailsSizing, 4) * 0.5 + 0.5) * 0.8;
 		cloudCoverage -= details * cloudCoverage;
 	}
 	//cloudCoverage *= 
