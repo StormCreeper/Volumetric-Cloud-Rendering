@@ -19,7 +19,9 @@ I re-used some boilerplate code from the first practical project of this class (
 - Compute the texture in a compute shader
 ## Todo
 - More accurated cloud volume generation with different kinds of noise
+- Different heights of clouds (for the moment, they lie on a plane)
 - Render the clouds at quarter resolution to speedup the rendering pass
+- Flight simulator ??
 ## Renders
 Here are some renders with a basic density function and colored lights  
 ![Render 1](images/Render1.png)  
