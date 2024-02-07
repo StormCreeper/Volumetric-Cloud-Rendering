@@ -212,7 +212,7 @@ void initGLFW() {
     // Create the window
     g_window = glfwCreateWindow(
         1024, 768,
-        "Interactive 3D Applications (OpenGL) - Simple Solar System", nullptr, nullptr);
+        "Interactive 3D Applications (OpenGL) - Volumetric clouds rendering", nullptr, nullptr);
     if (!g_window) {
         std::cerr << "ERROR: Failed to open window" << std::endl;
         glfwTerminate();

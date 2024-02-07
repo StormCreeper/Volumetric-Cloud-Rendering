@@ -14,9 +14,6 @@ uniform mat4 u_invProjMat;
 
 #define MAX_LIGHTS 50
 
-//#define MAX_STEPS 80
-//#define MAX_LIGHT_STEPS 20
-
 #define PI 3.1415926535897932384626433832795
 
 struct Light {
@@ -48,15 +45,14 @@ uniform float u_lightStepSize;
 
 uniform sampler3D u_voxelTexture;
 
-void swap(inout float a, inout float b) {
+void swap(inout float a, inout float b) { // Utility function
 	float tmp = a;
 	a = b;
 	b = tmp;
 }
 
-
-bool projectToDomain(vec3 ro, vec3 rd, out float tmin, out float tmax) {
-
+// Returns true if the ray intersects the domain, and sets tmin and tmax to the two intersection points
+bool projectToDomain(vec3 ro, vec3 rd, out float tmin, out float tmax) { 
 	float dminx = u_domainCenter.x - u_domainSize.x;
 	float dmaxx = u_domainCenter.x + u_domainSize.x;
 	float dminy = u_domainCenter.y - u_domainSize.y;
@@ -104,25 +100,14 @@ float sampleDensity(vec3 p) {
 		return 0.0;
 
 	return texture(u_voxelTexture, pDomain).r * u_densityMultiplier;
-
-	// Test density function
-
-	float dx = min(abs(pDomain.x - 0.0), abs(pDomain.x - 1.0)) * 5.0;
-	float dy = min(abs(pDomain.y - 0.0), abs(pDomain.y - 1.0)) * 5.0;
-	float dz = min(abs(pDomain.z - 0.0), abs(pDomain.z - 1.0)) * 5.0;
-
-	float d = min(min(dx, dy), dz) + sin(p.x * 4.0) * 0.1 + sin(p.y * 4.0) * 0.1 + sin(p.z * 4.0) * 0.1;
-	d = clamp(d, 0.0, 1.0);
-	
-	return d;
 }
 
-float hg(float cosTheta, float g) {
+float hg(float cosTheta, float g) { // Henyey-Greenstein phase function
 	float g2 = g * g;
 	return (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5) / (4.0 * PI);
 }
 
-float phase(float cosTheta) {
+float phase(float cosTheta) { // Composite phase function
 	float blend = .5;
 	float hgBlend = hg(cosTheta, u_phaseParams.x) * (1-blend) + hg(cosTheta, -u_phaseParams.y) * blend;
 	return u_phaseParams.z + hgBlend*u_phaseParams.w;
@@ -196,7 +181,7 @@ vec4 raymarchCloud(vec3 rayOrigin, vec3 rayDir, float trender) {
 	return vec4(lightEnergy, transmittance);
 }
 
-vec3 computeRenderColor(vec3 albedo, vec3 normal, vec3 position) {
+vec3 computeRenderColor(vec3 albedo, vec3 normal, vec3 position) { // Lighting on solid objects
 	vec3 diffuse = vec3(0);
 	vec3 ambient = vec3(0);
 
@@ -226,8 +211,10 @@ void main() {
 	vec3 normal = texture(u_Normal, TexCoords).rgb;
 	vec3 position = texture(u_Position, TexCoords).rgb;
 
-	// Raymarching
+	// --- Raymarching ---
 	vec2 uv = TexCoords * 2.0 - 1.0;
+
+	// Primary ray generation
 
 	vec4 clip = vec4(uv, -1.0, 1.0);
 	vec4 eye = vec4(vec2(u_invProjMat * clip), -1.0, 0.0);
@@ -243,17 +230,13 @@ void main() {
 
 	vec3 renderColor = vec3(0);
 
-	if(position == vec3(0)) {
-		// Sky color
+	if(position == vec3(0)) { // Sky color
 		renderColor = getSkyColor(rayDir);
-	} else {
-		// Solid objects color
+	} else { // Solid objects color
 		renderColor = computeRenderColor(albedo, normal, position);
 	}
 
-	vec3 finalColor = renderColor * transmittance + lightEnergy;
-
-
+	vec3 finalColor = renderColor * transmittance + lightEnergy; // Composite the two colors
 
     FragColor = vec4(finalColor, 1.0);
 }

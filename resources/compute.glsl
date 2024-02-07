@@ -15,7 +15,7 @@ uniform float u_windSpeed;
 float tseed = 0;
 uint rngState;
 
-uint wang_hash(inout uint seed) {
+uint wang_hash(inout uint seed) { // From https://gist.github.com/badboy/6267743
     seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
     seed *= uint(9);
     seed = seed ^ (seed >> 4);
@@ -30,7 +30,7 @@ float RandomFloat01(inout uint state) {
 vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
 vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
 
-float snoise(vec3 v){ 
+float snoise(vec3 v){ // From https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83 
 	const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
 	const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
 
@@ -138,12 +138,11 @@ void main() {
 		float details = (fbm(vec3(nPos + windDir * windSpeed * u_time * 1.5) * detailsSizing, 4) * 0.5 + 0.5) * 0.8;
 		cloudCoverage -= details * cloudCoverage;
 	}
-	//cloudCoverage *= 
 
 
 	cloudCoverage = pow(cloudCoverage, 1.5);
 
-	cloudCoverage = clamp(cloudCoverage, 0.0, 1.0);
+	cloudCoverage = clamp(cloudCoverage, 0.0, 1.0); // Necessary to avoid weird values in the final texture
 	
 	imageStore(img_output, coords, vec4(cloudCoverage));
 }
