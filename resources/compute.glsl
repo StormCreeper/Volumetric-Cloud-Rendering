@@ -12,20 +12,6 @@ uniform float u_time;
 uniform vec3 u_windDir;
 uniform float u_windSpeed;
 
-float tseed = 0;
-uint rngState;
-
-uint wang_hash(inout uint seed) { // From https://gist.github.com/badboy/6267743
-    seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
-    seed *= uint(9);
-    seed = seed ^ (seed >> 4);
-    seed *= uint(0x27d4eb2d);
-    seed = seed ^ (seed >> 15);
-    return seed;
-} 
-float RandomFloat01(inout uint state) {
-    return float(wang_hash(state)) / 4294967296.0;
-}
 
 vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
 vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
@@ -117,14 +103,11 @@ void main() {
 	ivec3 coords = ivec3(gl_GlobalInvocationID);
 	vec3 nPos = (vec3(coords) / vec3(u_resolution) * 2.0 - 1.0) * u_targetSize + u_targetOffset;
 	
-	uint rngState = uint(uint(coords.x) * uint(1973) + uint(coords.y) * uint(12573) + uint(coords.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
-	uint rngState2 = 0;
-	
 	vec3 windDir = vec3(0.0, 0.0, 1.0);
-	float windSpeed = 5;
+	float windSpeed = 10;
 
 	vec3 coverageSizing = vec3(0.01, 0.0, 0.01);
-	float cloudCoverage = fbm(vec3(nPos + windDir * windSpeed * u_time) * coverageSizing, 2) * 0.5 - 0.1;
+	float cloudCoverage = fbm(vec3(nPos + windDir * windSpeed * u_time) * coverageSizing, 2) * 0.5 + 0.2;
 	cloudCoverage = max(cloudCoverage, 0.0);
 	
 	float normalizedHeight = (coords.y / u_resolution.y) * 2.0 - 1.0;
@@ -136,11 +119,13 @@ void main() {
 	
 	if(cloudCoverage > 0.0) {
 		float details = (fbm(vec3(nPos + windDir * windSpeed * u_time * 1.5) * detailsSizing, 4) * 0.5 + 0.5) * 0.8;
-		cloudCoverage -= details * cloudCoverage;
+		cloudCoverage -= details * 0.4;// * cloudCoverage;
 	}
 
+	cloudCoverage = max(cloudCoverage, 0.0);
 
-	cloudCoverage = pow(cloudCoverage, 1.5);
+
+	cloudCoverage = pow(cloudCoverage, 1.0);
 
 	cloudCoverage = clamp(cloudCoverage, 0.0, 1.0); // Necessary to avoid weird values in the final texture
 	

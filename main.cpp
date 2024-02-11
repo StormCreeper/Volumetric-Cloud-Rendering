@@ -96,8 +96,6 @@ struct Scene {
         setUniform(lightingShader, "u_scatteringG", m_volumeParams.scatteringG);
         setUniform(lightingShader, "u_phaseParams", m_volumeParams.phaseParams);
 
-        
-
         setUniform(lightingShader, "u_domainCenter", m_generationParams.domainCenter);
         setUniform(lightingShader, "u_domainSize", m_generationParams.domainSize);
     }
@@ -113,14 +111,14 @@ void setDefaults() {
     g_scene.m_volumeParams.lightStepSize = 0.01f;
 
     g_scene.m_generationParams.domainCenter = glm::vec3(0, 30, 0);
-    g_scene.m_generationParams.domainSize = glm::vec3(200, 10, 200);
+    g_scene.m_generationParams.domainSize = glm::vec3(150, 10, 150);
 
     g_scene.m_volumeParams.cloudAbsorption = 1.0f;
-    g_scene.m_volumeParams.lightAbsorption = 0.7f;
-    g_scene.m_volumeParams.densityMultiplier = 4.0f;
+    g_scene.m_volumeParams.lightAbsorption = 0.3f;
+    g_scene.m_volumeParams.densityMultiplier = 2.0f;
 
     g_scene.m_volumeParams.scatteringG = 0.5f;
-    g_scene.m_volumeParams.phaseParams = glm::vec4(0.68f, 0.1f, 0.1f, 1.0f);
+    g_scene.m_volumeParams.phaseParams = glm::vec4(0.74f, 0.1f, 0.1f, 1.0f);
 }
 
 
@@ -154,11 +152,11 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 }
 
 static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
-    glm::vec2 uv = glm::vec2(xpos, ypos) / glm::vec2(1024, 768) * 2.0f - 1.0f;
+    /*glm::vec2 uv = glm::vec2(xpos, ypos) / glm::vec2(1024, 768) * 2.0f - 1.0f;
     glm::vec4 clip = glm::vec4(uv.x, -uv.y, 0.99f, 1.0f);
     glm::vec4 eye = glm::inverse(g_camera.computeProjectionMatrix()) * clip;
     glm::vec4 world = glm::inverse(g_camera.computeViewMatrix()) * eye;
-    world /= world.w;
+    world /= world.w;*/
 
     //g_objects[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(world.x, world.y, world.z)));
 
@@ -271,7 +269,6 @@ void initGPUprogram() {
     glLinkProgram(g_lightingShader);  // The main GPU program is ready to be handle streams of polygons
 }
 
-
 void initScene() {
     g_objects.push_back(std::make_shared<Object3D>(Mesh::genSphere(16)));
     g_objects.push_back(std::make_shared<Object3D>(Mesh::genSubdividedPlane(2)));
@@ -327,13 +324,7 @@ void clear() {
 
 bool g_triggerRecompute = true;
 
-void renderUI() {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
-    // Start drawing here
-
+void renderPerfsUI() {
     ImGui::Begin("Performance", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
     ImGui::Text("FPS: %.1f", g_fps);
@@ -346,7 +337,8 @@ void renderUI() {
     ImGui::SliderFloat("Light step size", &g_scene.m_volumeParams.lightStepSize, 0.01f, 0.5f);
     
     ImGui::End();
-
+}
+void renderLightsUI() {
     ImGui::Begin("Lights", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
     const char* items[] = { "Ambiant", "Point", "Directional" };
@@ -393,7 +385,8 @@ void renderUI() {
     }
 
     ImGui::End();
-
+}
+void renderVolumeUI() {
     ImGui::Begin("Volume", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
     if(ImGui::SliderFloat3("Center", &g_scene.m_generationParams.domainCenter.x, -10.0f, 10.0f)) g_triggerRecompute = true;
@@ -407,6 +400,25 @@ void renderUI() {
     ImGui::SliderFloat4("Phase params", &g_scene.m_volumeParams.phaseParams.x, 0.0f, 1.0f);
 
     ImGui::End();
+}
+
+void renderGenUI() {
+    ImGui::Begin("Generation", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+    ImGui::End();
+}
+
+void renderUI() {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // Start drawing here
+
+    renderPerfsUI();
+    renderLightsUI();
+    renderVolumeUI();
+    renderGenUI();
 
     // End drawing here
 
