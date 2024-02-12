@@ -148,6 +148,14 @@ float lightMarch(vec3 ro, Light light) {
 
 vec3 getSkyColor(vec3 dir) {
 	vec3 color = vec3(0.2, 0.4, 0.6) * (1.0 - dir.y) + vec3(0.8, 0.9, 1.0) * dir.y;
+
+	// Directionnal lights
+	for(int i=0; i<u_numLights; i++) {
+		if(u_lights[i].type != 2) continue;
+		float lightEnergy = pow(max(dot(dir, normalize(u_lights[i].position)), 0.), 256.);
+		color += lightEnergy * u_lights[i].intensity * u_lights[i].color;
+	}
+
 	return max(color, 0.);
 }
 

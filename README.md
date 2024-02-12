@@ -7,7 +7,7 @@ I re-used some boilerplate code from the first practical project of this class (
 - Clone the project with `git clone https://github.com/StormCreeper/Volumetric-Cloud-Rendering.git`
 - Update the dependencies if it is not done automatically: `git submodule update --init --recursive`
 - In the root folder,  run `cmake -C build`
-- `cd build`, then compile with `make` (it may take some time building the libraries)
+- `cd build`, then compile with `make` (it may take some time to build the libraries)
 - Finally, run the executable: `./IGR_Clouds`
 
 ## Implemented

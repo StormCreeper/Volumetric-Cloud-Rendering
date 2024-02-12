@@ -115,7 +115,7 @@ void setDefaults() {
 
     g_scene.m_volumeParams.cloudAbsorption = 1.0f;
     g_scene.m_volumeParams.lightAbsorption = 0.3f;
-    g_scene.m_volumeParams.densityMultiplier = 2.0f;
+    g_scene.m_volumeParams.densityMultiplier = 1.5f;
 
     g_scene.m_volumeParams.scatteringG = 0.5f;
     g_scene.m_volumeParams.phaseParams = glm::vec4(0.74f, 0.1f, 0.1f, 1.0f);
@@ -254,7 +254,7 @@ void initOpenGL() {
     g_framebuffer = std::make_shared<FrameBuffer>(1024, 768);
 
     // Disable v-sync
-    // glfwSwapInterval(0);
+    glfwSwapInterval(0);
 }
 
 void initGPUprogram() {
