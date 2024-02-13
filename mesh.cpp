@@ -10,6 +10,10 @@
 #include <cmath>
 #include <iostream>
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 void Mesh::initGPUGeometry(const std::vector<float> &vertexPositions, const std::vector<float> &vertexNormals, const std::vector<float> &vertexUVs, const std::vector<unsigned int> &triangleIndices) {
     // Create a single handle, vertex array object that contains attributes,
     // vertex buffer objects (e.g., vertex's position, normal, and color)
@@ -257,6 +261,64 @@ std::shared_ptr<Mesh> Mesh::genSubdividedPlane(int resolution) {
             triangleIndices.push_back(v2);
         }
     }
+
+    // Create a mesh object
+    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
+    mesh->initGPUGeometry(vertexPositions, vertexNormals, vertexUVs, triangleIndices);
+
+    return mesh;
+}
+
+std::shared_ptr<Mesh> Mesh::loadMeshFromFile(const std::string &filename) {
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile( filename, 
+        aiProcess_Triangulate |
+        aiProcess_JoinIdenticalVertices
+    );
+
+    if(!scene) {
+        std::cerr << "Couldn't import " << filename << ", " << importer.GetErrorString();
+        return nullptr;
+    }
+    aiMesh *assimpMesh = scene->mMeshes[0];
+
+    std::vector<float> vertexPositions;
+    std::vector<float> vertexNormals;
+    std::vector<float> vertexUVs;
+    std::vector<unsigned int> triangleIndices;
+
+    vertexPositions.reserve(assimpMesh->mNumVertices * 3);
+    vertexNormals.reserve(assimpMesh->mNumVertices * 3);
+    vertexUVs.reserve(assimpMesh->mNumVertices * 2);
+    triangleIndices.reserve(assimpMesh->mNumFaces * 3);
+
+    for (size_t i = 0; i < assimpMesh->mNumVertices; ++i) {
+        vertexPositions.push_back(assimpMesh->mVertices[i].x);
+        vertexPositions.push_back(assimpMesh->mVertices[i].y);
+        vertexPositions.push_back(assimpMesh->mVertices[i].z);
+
+        vertexNormals.push_back(assimpMesh->mNormals[i].x);
+        vertexNormals.push_back(assimpMesh->mNormals[i].y);
+        vertexNormals.push_back(assimpMesh->mNormals[i].z);
+
+        if(assimpMesh->mTextureCoords[0]) {
+            vertexUVs.push_back(assimpMesh->mTextureCoords[0][i].x);
+            vertexUVs.push_back(assimpMesh->mTextureCoords[0][i].y);
+        } else {
+            vertexUVs.push_back(0.0f);
+            vertexUVs.push_back(0.0f);
+        }
+    }
+
+
+    for (size_t i = 0; i < assimpMesh->mNumFaces; ++i) {
+        aiFace face = assimpMesh->mFaces[i];
+        for (size_t j = 0; j < face.mNumIndices; ++j) {
+            triangleIndices.push_back(face.mIndices[j]);
+        }
+    }
+
+
 
     // Create a mesh object
     std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();

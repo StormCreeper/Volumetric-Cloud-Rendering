@@ -40,7 +40,13 @@ target_link_libraries(${PROJECT_NAME} glm)
 add_subdirectory(dep/imgui)
 target_link_libraries(${PROJECT_NAME} IMGUI)
 
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_INJECT_DEBUG_POSTFIX OFF CACHE BOOL "" FORCE)
+set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
+
 add_subdirectory(dep/assimp)
+target_include_directories(${PROJECT_NAME} PRIVATE dep/assimp/include/)
 target_link_libraries(${PROJECT_NAME} assimp)
 
 target_link_libraries(${PROJECT_NAME} ${CMAKE_DL_LIBS})

@@ -272,6 +272,7 @@ void initGPUprogram() {
 void initScene() {
     g_objects.push_back(std::make_shared<Object3D>(Mesh::genSphere(16)));
     g_objects.push_back(std::make_shared<Object3D>(Mesh::genSubdividedPlane(2)));
+    g_objects.push_back(std::make_shared<Object3D>(Mesh::loadMeshFromFile("../resources/models/porco_rosso.stl")));
 
     g_objects[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, 0.0f)));
 

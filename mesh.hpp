@@ -23,6 +23,7 @@ public:
     static std::shared_ptr<Mesh> genSphere(const size_t resolution = 16); // Should generate a unit sphere
     static std::shared_ptr<Mesh> genPlane(); // Should generate a unit plane
     static std::shared_ptr<Mesh> genSubdividedPlane(int resolution); // Should generate a unit plane
+    static std::shared_ptr<Mesh> loadMeshFromFile(const std::string &filename);
     
     void bind() const {
         glBindVertexArray(m_vao);
