@@ -536,7 +536,7 @@ void update(const float currentTimeInSec) {
     
     g_camera.setPosition(targetPosition + glm::vec3(cameraOffset));
 
-    if(frameCount % 5 == 0) g_triggerRecompute = true;
+    if(frameCount % 1 == 0) g_triggerRecompute = true;
 
     if(g_triggerRecompute) {
         g_voxelTexture.generateTexture(g_scene.m_generationParams.domainSize, g_scene.m_generationParams.domainCenter);
