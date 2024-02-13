@@ -40,4 +40,7 @@ target_link_libraries(${PROJECT_NAME} glm)
 add_subdirectory(dep/imgui)
 target_link_libraries(${PROJECT_NAME} IMGUI)
 
+add_subdirectory(dep/assimp)
+target_link_libraries(${PROJECT_NAME} assimp)
+
 target_link_libraries(${PROJECT_NAME} ${CMAKE_DL_LIBS})
