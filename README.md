@@ -33,4 +33,5 @@ Changed the sky and volume shape to make it look like clouds:
 Added a time offset and recomputing every 5 frames:  
 
 https://github.com/StormCreeper/Volumetric-Cloud-Rendering/assets/33285021/3514d8f1-56ba-4fa0-9bd2-03aa92fe8745
+https://github.com/StormCreeper/Volumetric-Cloud-Rendering/assets/33285021/d30fc231-9c15-46cd-88e1-8565517668c5
 
