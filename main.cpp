@@ -279,6 +279,8 @@ void initScene() {
     g_objects[1]->setModelMatrix(glm::scale(glm::mat4(1.0f), glm::vec3(40.0f, 10.0f, 40.0f)));
     g_objects[1]->setModelMatrix(glm::translate(g_objects[1]->getModelMatrix(), glm::vec3(0.0f, -1.0f, 0.0f)));
 
+    g_objects[2]->setModelMatrix(glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f)));
+    g_objects[2]->setModelMatrix(glm::rotate(g_objects[2]->getModelMatrix(), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
     g_scene.m_lights[g_scene.m_numLights++] = Light{
         2,
         glm::vec3(0.5f, 1.0f, 0.5f),

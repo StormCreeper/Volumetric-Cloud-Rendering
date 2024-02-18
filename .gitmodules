@@ -10,6 +10,3 @@
 [submodule "dep/glad"]
 	path = dep/glad
 	url = https://github.com/Dav1dde/glad.git
-[submodule "dep/assimp"]
-	path = dep/assimp
-	url = https://github.com/assimp/assimp.git
