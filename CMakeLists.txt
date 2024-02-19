@@ -47,6 +47,7 @@ set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
 
 set(BUILD_SHARED_LIBS ON)
 add_subdirectory(dep/assimp)
+target_include_directories(${PROJECT_NAME} PRIVATE dep/assimp/include/)
 target_link_libraries(${PROJECT_NAME} ${ASSIMP_LIBRARIES})
 
 target_link_libraries(${PROJECT_NAME} ${CMAKE_DL_LIBS})
