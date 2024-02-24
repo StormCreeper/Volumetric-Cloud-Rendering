@@ -24,6 +24,7 @@ set(SOURCES
   object3d.hpp
   framebuffer.hpp
   voxeltexture.hpp
+  CloudsManager.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

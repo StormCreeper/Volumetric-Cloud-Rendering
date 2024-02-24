@@ -6,6 +6,7 @@
 #include "object3d.hpp"
 #include "framebuffer.hpp"
 #include "voxeltexture.hpp"
+#include "cloudsmanager.hpp"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -35,6 +36,7 @@ std::shared_ptr<FrameBuffer> g_framebuffer {};
 std::vector<std::shared_ptr<Object3D>> g_objects {};
 
 VoxelTexture g_voxelTexture {};
+CloudsManager g_cloudsManager {};
 
 struct Light {
     int type; // 0 = ambiant, 1 = point, 2 = directional
@@ -43,35 +45,9 @@ struct Light {
     float intensity;
 };
 
-struct VolumeParams {
-    int numSteps;
-    int numLightSteps;
-
-    float stepSize;
-    float lightStepSize;
-
-    float cloudAbsorption;
-    float lightAbsorption;
-    float densityMultiplier;
-
-    float scatteringG;
-    glm::vec4 phaseParams;
-};
-
-struct GenerationParams {
-    glm::vec3 domainCenter {};
-    glm::vec3 domainSize {};
-
-    glm::vec3 worldOffset {};
-    glm::vec3 worldSize {};
-};
-
 struct Scene {
     Light m_lights[MAX_LIGHTS] {};
     int m_numLights = 0;
-
-    VolumeParams m_volumeParams {};
-    GenerationParams m_generationParams {};
 
 
     void setUniforms(GLuint lightingShader) {
@@ -83,43 +59,10 @@ struct Scene {
         }
 
         setUniform(lightingShader, "u_numLights", m_numLights);
-
-        setUniform(lightingShader, "MAX_STEPS", m_volumeParams.numSteps);
-        setUniform(lightingShader, "MAX_LIGHT_STEPS", m_volumeParams.numLightSteps);
-        setUniform(lightingShader, "u_stepSize", m_volumeParams.stepSize);
-        setUniform(lightingShader, "u_lightStepSize", m_volumeParams.lightStepSize);
-
-        setUniform(lightingShader, "u_cloudAbsorption", m_volumeParams.cloudAbsorption);
-        setUniform(lightingShader, "u_lightAbsorption", m_volumeParams.lightAbsorption);
-        setUniform(lightingShader, "u_densityMultiplier", m_volumeParams.densityMultiplier);
-
-        setUniform(lightingShader, "u_scatteringG", m_volumeParams.scatteringG);
-        setUniform(lightingShader, "u_phaseParams", m_volumeParams.phaseParams);
-
-        setUniform(lightingShader, "u_domainCenter", m_generationParams.domainCenter);
-        setUniform(lightingShader, "u_domainSize", m_generationParams.domainSize);
     }
 };
 
 Scene g_scene {};
-
-void setDefaults() {
-    g_scene.m_volumeParams.numSteps = 30;
-    g_scene.m_volumeParams.numLightSteps = 10;
-
-    g_scene.m_volumeParams.stepSize = 0.01f;
-    g_scene.m_volumeParams.lightStepSize = 0.01f;
-
-    g_scene.m_generationParams.domainCenter = glm::vec3(0, 30, 0);
-    g_scene.m_generationParams.domainSize = glm::vec3(150, 10, 150);
-
-    g_scene.m_volumeParams.cloudAbsorption = 1.0f;
-    g_scene.m_volumeParams.lightAbsorption = 0.3f;
-    g_scene.m_volumeParams.densityMultiplier = 1.5f;
-
-    g_scene.m_volumeParams.scatteringG = 0.5f;
-    g_scene.m_volumeParams.phaseParams = glm::vec4(0.74f, 0.1f, 0.1f, 1.0f);
-}
 
 
 float g_fps = 0.0f;
@@ -284,8 +227,6 @@ void initScene() {
         glm::vec3(1.0, 1.0, 1.0),
         1.0f
     };
-
-    setDefaults();
 }
 
 void initCamera() {
@@ -309,6 +250,8 @@ void init() {
     initCamera();
     
     initImGui();
+
+    g_cloudsManager.setDefaults();
 }
 
 void clear() {
@@ -329,12 +272,6 @@ void renderPerfsUI() {
 
     ImGui::Text("FPS: %.1f", g_fps);
     ImGui::Text("Frame time: %.3f ms", 1000.0f / g_fps);
-
-    ImGui::SliderInt("Num steps", &g_scene.m_volumeParams.numSteps, 0, 200);
-    ImGui::SliderInt("Num light steps", &g_scene.m_volumeParams.numLightSteps, 0, 100);
-
-    ImGui::SliderFloat("Step size", &g_scene.m_volumeParams.stepSize, 0.01f, 0.5f);
-    ImGui::SliderFloat("Light step size", &g_scene.m_volumeParams.lightStepSize, 0.01f, 0.5f);
     
     ImGui::End();
 }
@@ -386,28 +323,6 @@ void renderLightsUI() {
 
     ImGui::End();
 }
-void renderVolumeUI() {
-    ImGui::Begin("Volume", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-
-    if(ImGui::SliderFloat3("Center", &g_scene.m_generationParams.domainCenter.x, -10.0f, 10.0f)) g_triggerRecompute = true;
-    if(ImGui::SliderFloat3("Size", &g_scene.m_generationParams.domainSize.x, 0.0f, 10.0f)) g_triggerRecompute = true;
-
-    ImGui::SliderFloat("Cloud absorption", &g_scene.m_volumeParams.cloudAbsorption, 0.0f, 2.0f);
-    ImGui::SliderFloat("Light absorption", &g_scene.m_volumeParams.lightAbsorption, 0.0f, 2.0f);
-    ImGui::SliderFloat("Density multiplier", &g_scene.m_volumeParams.densityMultiplier, 0.0f, 4.0f);
-
-    ImGui::SliderFloat("Scattering G", &g_scene.m_volumeParams.scatteringG, -1.0f, 1.0f);
-    ImGui::SliderFloat4("Phase params", &g_scene.m_volumeParams.phaseParams.x, 0.0f, 1.0f);
-
-    ImGui::End();
-}
-
-void renderGenUI() {
-    ImGui::Begin("Generation", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-
-    ImGui::End();
-}
-
 void renderUI() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -417,17 +332,12 @@ void renderUI() {
 
     renderPerfsUI();
     renderLightsUI();
-    renderVolumeUI();
-    renderGenUI();
+    if(g_cloudsManager.renderUI()) g_triggerRecompute = true;
 
     // End drawing here
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
-
-void setParamsUniforms() {
-    
 }
 
 void setUniforms() {
@@ -444,8 +354,6 @@ void setUniforms() {
     setUniform(g_geometryShader, "u_cameraPosition", g_camera.getPosition());
 
     setUniform(g_geometryShader, "u_time", static_cast<float>(glfwGetTime()));
-
-    setParamsUniforms();
 }
 
 // The main rendering call
@@ -491,6 +399,7 @@ void render() {
     setUniform(g_lightingShader, "u_voxelTexture", 3);
 
     g_scene.setUniforms(g_lightingShader);
+    g_cloudsManager.setUniforms(g_lightingShader);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, g_framebuffer->m_position);
@@ -539,7 +448,7 @@ void update(const float currentTimeInSec) {
     if(frameCount % 1 == 0) g_triggerRecompute = true;
 
     if(g_triggerRecompute) {
-        g_voxelTexture.generateTexture(g_scene.m_generationParams.domainSize, g_scene.m_generationParams.domainCenter);
+        g_voxelTexture.generateTexture(g_cloudsManager.m_generationParams.domainSize, g_cloudsManager.m_generationParams.domainCenter);
         g_triggerRecompute = false;
     }
 
