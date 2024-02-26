@@ -60,14 +60,14 @@ public:
     }
 
     void setDefaults() {
-        m_volumeParams.numSteps = 30;
-        m_volumeParams.numLightSteps = 10;
+        m_volumeParams.numSteps = 100;
+        m_volumeParams.numLightSteps = 20;
 
         m_volumeParams.stepSize = 0.01f;
         m_volumeParams.lightStepSize = 0.01f;
 
         m_generationParams.domainCenter = glm::vec3(0, 30, 0);
-        m_generationParams.domainSize = glm::vec3(150, 10, 150);
+        m_generationParams.domainSize = glm::vec3(100, 10, 100);
 
         m_volumeParams.cloudAbsorption = 1.0f;
         m_volumeParams.lightAbsorption = 0.3f;

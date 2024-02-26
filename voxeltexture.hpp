@@ -19,7 +19,7 @@ public:
     }
 
     void generateTexture(glm::vec3 targetSize, glm::vec3 targetOffest) {
-        std::cout << "Generating voxel texture..." << std::endl;
+        //std::cout << "Generating voxel texture..." << std::endl;
 
         if (shaderID) glDeleteProgram(shaderID);
 

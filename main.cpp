@@ -7,6 +7,7 @@
 #include "framebuffer.hpp"
 #include "voxeltexture.hpp"
 #include "cloudsmanager.hpp"
+#include "scene.hpp"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -20,7 +21,6 @@
 #include <memory>
 #include <string>
 
-const int MAX_LIGHTS = 10;
 
 // Window parameters
 GLFWwindow *g_window {};
@@ -29,38 +29,12 @@ GLFWwindow *g_window {};
 GLuint g_geometryShader {};  // A GPU program contains at least a vertex shader and a fragment shader
 GLuint g_lightingShader {}; // A GPU program contains at least a vertex shader and a fragment shader
 
-Camera g_camera {};
 
 std::shared_ptr<FrameBuffer> g_framebuffer {};
-
-std::vector<std::shared_ptr<Object3D>> g_objects {};
 
 VoxelTexture g_voxelTexture {};
 CloudsManager g_cloudsManager {};
 
-struct Light {
-    int type; // 0 = ambiant, 1 = point, 2 = directional
-    glm::vec3 position;
-    glm::vec3 color;
-    float intensity;
-};
-
-struct Scene {
-    Light m_lights[MAX_LIGHTS] {};
-    int m_numLights = 0;
-
-
-    void setUniforms(GLuint lightingShader) {
-        for(int i = 0; i < m_numLights; i++) {
-            setUniform(lightingShader, std::string("u_lights[" + std::to_string(i) + "].type").c_str(), m_lights[i].type);
-            setUniform(lightingShader, std::string("u_lights[" + std::to_string(i) + "].position").c_str(), m_lights[i].position);
-            setUniform(lightingShader, std::string("u_lights[" + std::to_string(i) + "].color").c_str(), m_lights[i].color);
-            setUniform(lightingShader, std::string("u_lights[" + std::to_string(i) + "].intensity").c_str(), m_lights[i].intensity);
-        }
-
-        setUniform(lightingShader, "u_numLights", m_numLights);
-    }
-};
 
 Scene g_scene {};
 
@@ -69,7 +43,7 @@ float g_fps = 0.0f;
 
 // Executed each time the window is resized. Adjust the aspect ratio and the rendering viewport to the current window.
 void windowSizeCallback(GLFWwindow *window, int width, int height) {
-    g_camera.setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
+    g_scene.m_camera.setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
     glViewport(0, 0, (GLint)width, (GLint)height);  // Dimension of the rendering region in the window
 }
 
@@ -92,18 +66,6 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     if(action == GLFW_RELEASE) {
         if(key == GLFW_KEY_LEFT_SHIFT) shiftPressed = false;
     }
-}
-
-static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
-    /*glm::vec2 uv = glm::vec2(xpos, ypos) / glm::vec2(1024, 768) * 2.0f - 1.0f;
-    glm::vec4 clip = glm::vec4(uv.x, -uv.y, 0.99f, 1.0f);
-    glm::vec4 eye = glm::inverse(g_camera.computeProjectionMatrix()) * clip;
-    glm::vec4 world = glm::inverse(g_camera.computeViewMatrix()) * eye;
-    world /= world.w;*/
-
-    //g_objects[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(world.x, world.y, world.z)));
-
-    //g_scene.m_lights[0].position = glm::vec3(world.x, world.y, world.z);
 }
 
 
@@ -165,7 +127,6 @@ void initGLFW() {
     glfwSetWindowSizeCallback(g_window, windowSizeCallback);
     glfwSetKeyCallback(g_window, keyCallback);
     glfwSetScrollCallback(g_window, scrollCallback);
-    glfwSetCursorPosCallback(g_window, cursorPositionCallback);
 }
 
 void initImGui() {
@@ -212,42 +173,16 @@ void initGPUprogram() {
     glLinkProgram(g_lightingShader);  // The main GPU program is ready to be handle streams of polygons
 }
 
-void initScene() {
-    g_objects.push_back(std::make_shared<Object3D>(Mesh::genSphere(16)));
-    g_objects.push_back(std::make_shared<Object3D>(Mesh::genSubdividedPlane(2)));
-
-    g_objects[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, 0.0f)));
-
-    g_objects[1]->setModelMatrix(glm::scale(glm::mat4(1.0f), glm::vec3(40.0f, 10.0f, 40.0f)));
-    g_objects[1]->setModelMatrix(glm::translate(g_objects[1]->getModelMatrix(), glm::vec3(0.0f, -1.0f, 0.0f)));
-
-    g_scene.m_lights[g_scene.m_numLights++] = Light{
-        2,
-        glm::vec3(0.5f, 1.0f, 0.5f),
-        glm::vec3(1.0, 1.0, 1.0),
-        1.0f
-    };
-}
-
-void initCamera() {
-    int width, height;
-    glfwGetWindowSize(g_window, &width, &height);
-    g_camera.setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
-
-    g_camera.setPosition(glm::vec3(0.0, 0.0, 3.0));
-    g_camera.setNear(0.1);
-    g_camera.setFar(200);
-
-    g_camera.setFoV(90);
-}
 
 void init() {
     initGLFW();
     initOpenGL();
 
-    initScene();
+    int width, height;
+    glfwGetWindowSize(g_window, &width, &height);
+
+    g_scene.init(width, height);
     initGPUprogram();
-    initCamera();
     
     initImGui();
 
@@ -340,22 +275,6 @@ void renderUI() {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void setUniforms() {
-    const glm::mat4 viewMatrix = g_camera.computeViewMatrix();
-    const glm::mat4 projMatrix = g_camera.computeProjectionMatrix();
-    
-    setUniform(g_geometryShader, "u_viewMat", viewMatrix);
-    setUniform(g_geometryShader, "u_projMat", projMatrix);
-    setUniform(g_geometryShader, "u_proj_viewMat", projMatrix * viewMatrix);
-
-    setUniform(g_geometryShader, "u_modelMat", glm::mat4(1.0f));
-    setUniform(g_geometryShader, "u_transposeInverseModelMat", glm::mat4(1.0f));
-
-    setUniform(g_geometryShader, "u_cameraPosition", g_camera.getPosition());
-
-    setUniform(g_geometryShader, "u_time", static_cast<float>(glfwGetTime()));
-}
-
 // The main rendering call
 void render() {
     
@@ -366,13 +285,7 @@ void render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  // Erase the color and z buffers.
     glUseProgram(g_geometryShader);
 
-    setUniforms();
-
-    // Render objects
-
-    for(std::shared_ptr<Object3D> mesh : g_objects) {
-        mesh->render(g_geometryShader);
-    }
+    g_scene.geometryPass(g_geometryShader);
 
     // Post-process pass
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -385,8 +298,8 @@ void render() {
     setUniform(g_lightingShader, "u_Normal", 1);
     setUniform(g_lightingShader, "u_Albedo", 2);
 
-    const glm::mat4 viewMatrix = g_camera.computeViewMatrix();
-    const glm::mat4 projMatrix = g_camera.computeProjectionMatrix();
+    const glm::mat4 viewMatrix = g_scene.m_camera.computeViewMatrix();
+    const glm::mat4 projMatrix = g_scene.m_camera.computeProjectionMatrix();
 
     setUniform(g_lightingShader, "u_viewMat", viewMatrix);
     setUniform(g_lightingShader, "u_projMat", projMatrix);
@@ -433,7 +346,7 @@ void update(const float currentTimeInSec) {
     // Update the camera position
 
     glm::vec3 targetPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-    g_camera.setTarget(targetPosition);
+    g_scene.m_camera.setTarget(targetPosition);
 
     //glm::vec3 cameraOffset = glm::normalize(glm::vec3(cos(g_cameraAngleX), 0.3f, sin(g_cameraAngleX))) * (1.1f + g_cameraDistance);
     glm::vec4 cameraOffset(0, 0, 1, 0);
@@ -443,7 +356,7 @@ void update(const float currentTimeInSec) {
     
     cameraOffset = g_cameraDistance * rot1 * rot2 * cameraOffset;
     
-    g_camera.setPosition(targetPosition + glm::vec3(cameraOffset));
+    g_scene.m_camera.setPosition(targetPosition + glm::vec3(cameraOffset));
 
     if(frameCount % 1 == 0) g_triggerRecompute = true;
 
