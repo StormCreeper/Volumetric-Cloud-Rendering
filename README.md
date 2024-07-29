@@ -30,6 +30,8 @@ First success with a 3D texture for the density map.
 ![Render 3](images/computed.png)  
 Changed the sky and volume shape to make it look like clouds:  
 ![Render 4](images/clouds.png)
+![Render 5](https://github.com/user-attachments/assets/e9032395-1cdd-4a77-9d8e-c5c87d92c577)
+
 Added a time offset and recomputing every 5 frames:  
 
 https://github.com/StormCreeper/Volumetric-Cloud-Rendering/assets/33285021/3514d8f1-56ba-4fa0-9bd2-03aa92fe8745
